@@ -52,7 +52,7 @@ export class TastytradeHttpClient {
     this.baseUrl = opts.baseUrl.replace(/\/$/, "");
     this.fetchImpl = opts.fetch ?? fetch;
     this.logger = opts.logger;
-    this.userAgent = opts.userAgent ?? "mcp-tastytrade/0.1.0";
+    this.userAgent = opts.userAgent ?? "mcp-tastytrade-js";
     this.token = new AccessToken(this.baseUrl, opts.oauth, this.fetchImpl, this.userAgent);
   }
 

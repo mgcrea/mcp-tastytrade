@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { TastytradeApiError } from "../src/client/errors.js";
 import { TastytradeHttpClient } from "../src/client/http.js";
 
