@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+
 import { getAccount, getCustomer, listAccounts } from "../client/endpoints/accounts.js";
 import { getBalances } from "../client/endpoints/balances.js";
 import { getPositions } from "../client/endpoints/positions.js";
