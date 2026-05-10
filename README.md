@@ -77,6 +77,55 @@ Inspect tool wiring with the official inspector:
 npx @modelcontextprotocol/inspector node dist/cli.js
 ```
 
+## Run via Docker
+
+```bash
+pnpm docker:build          # builds mcp-tastytrade:latest
+```
+
+The container runs `node /app/dist/cli.js` as PID 1 and speaks JSON-RPC over stdio. Pass credentials via `-e VAR` (forwarded from the spawning shell) or `--env-file`.
+
+`.mcp.json` for Claude Code (project-scoped) / Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "tastytrade": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "TASTYTRADE_CLIENT_SECRET",
+        "-e", "TASTYTRADE_REFRESH_TOKEN",
+        "-e", "TASTYTRADE_SCOPE",
+        "-e", "TASTYTRADE_ENV",
+        "-e", "TASTYTRADE_ALLOW_TRADING",
+        "mcp-tastytrade:latest"
+      ],
+      "env": {
+        "TASTYTRADE_CLIENT_SECRET": "...",
+        "TASTYTRADE_REFRESH_TOKEN": "...",
+        "TASTYTRADE_SCOPE": "read trade openid",
+        "TASTYTRADE_ENV": "prod"
+      }
+    }
+  }
+}
+```
+
+Notes:
+
+- `-i` keeps stdin open (required); do **not** add `-t` — Claude Code spawns the process without a TTY.
+- `-e VAR` (no `=value`) forwards the value from the host env, which is what Claude Code sets from the `env` block above. Don't put secrets in `args`.
+- `--rm` cleans up the container after each MCP session.
+- Omit `TASTYTRADE_ALLOW_TRADING` (or leave it unset) to ship without order-placement / watchlist-mutation tools registered.
+
+If you'd rather not commit secrets to `.mcp.json`, point `--env-file` at a local `.env` instead:
+
+```json
+"args": ["run", "--rm", "-i", "--env-file", "/abs/path/to/.env", "mcp-tastytrade:latest"]
+```
+
 ## Tools
 
 ### Read-only (always available)
