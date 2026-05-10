@@ -14,7 +14,15 @@ export type QuoteSnapshot = {
 type Outgoing = Record<string, unknown> & { type: string; channel?: number };
 
 const CHANNEL = 3;
-const REQUESTED_FIELDS = ["eventType", "eventSymbol", "bidPrice", "askPrice", "bidSize", "askSize", "time"] as const;
+const REQUESTED_FIELDS = [
+  "eventType",
+  "eventSymbol",
+  "bidPrice",
+  "askPrice",
+  "bidSize",
+  "askSize",
+  "time",
+] as const;
 
 export const getQuoteSnapshot = async (
   http: TastytradeHttpClient,
