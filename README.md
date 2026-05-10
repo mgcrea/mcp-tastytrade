@@ -79,8 +79,16 @@ npx @modelcontextprotocol/inspector node dist/cli.js
 
 ## Run via Docker
 
+The published image is [`mgcrea/mcp-tastytrade`](https://hub.docker.com/r/mgcrea/mcp-tastytrade) on Docker Hub. Pull the latest tag or pin a version:
+
 ```bash
-pnpm docker:build          # builds mcp-tastytrade:latest
+docker pull mgcrea/mcp-tastytrade:latest
+```
+
+Or build locally:
+
+```bash
+pnpm docker:build          # tags mgcrea/mcp-tastytrade:latest and :<version>
 ```
 
 The container runs `node /app/dist/cli.js` as PID 1 and speaks JSON-RPC over stdio. Pass credentials via `-e VAR` (forwarded from the spawning shell) or `--env-file`.
@@ -100,7 +108,7 @@ The container runs `node /app/dist/cli.js` as PID 1 and speaks JSON-RPC over std
         "-e", "TASTYTRADE_SCOPE",
         "-e", "TASTYTRADE_ENV",
         "-e", "TASTYTRADE_ALLOW_TRADING",
-        "mcp-tastytrade:latest"
+        "mgcrea/mcp-tastytrade:latest"
       ],
       "env": {
         "TASTYTRADE_CLIENT_SECRET": "...",
@@ -123,7 +131,21 @@ Notes:
 If you'd rather not commit secrets to `.mcp.json`, point `--env-file` at a local `.env` instead:
 
 ```json
-"args": ["run", "--rm", "-i", "--env-file", "/abs/path/to/.env", "mcp-tastytrade:latest"]
+"args": ["run", "--rm", "-i", "--env-file", "/abs/path/to/.env", "mgcrea/mcp-tastytrade:latest"]
+```
+
+### Publishing
+
+```bash
+docker login                    # once, against docker.io
+pnpm docker:release             # multi-arch (amd64 + arm64) buildx + push
+```
+
+Or, for a single-arch local image:
+
+```bash
+pnpm docker:build
+pnpm docker:push                # pushes both :latest and :<package.json version>
 ```
 
 ## Tools

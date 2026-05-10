@@ -38,7 +38,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "docker:build": "docker build -t mcp-tastytrade:latest .",
+    "docker:build": "docker build -t mgcrea/mcp-tastytrade:latest -t mgcrea/mcp-tastytrade:$npm_package_version .",
+    "docker:buildx": "docker buildx build --platform linux/amd64,linux/arm64 -t mgcrea/mcp-tastytrade:latest -t mgcrea/mcp-tastytrade:$npm_package_version .",
+    "docker:push": "docker push mgcrea/mcp-tastytrade:latest && docker push mgcrea/mcp-tastytrade:$npm_package_version",
+    "docker:release": "pnpm docker:buildx --push",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
