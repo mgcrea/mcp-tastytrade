@@ -20,6 +20,7 @@ export class AccessToken {
     private readonly baseUrl: string,
     private readonly creds: OAuthCredentials,
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly userAgent = "mcp-tastytrade",
   ) {}
 
   get isFresh(): boolean {
@@ -50,6 +51,7 @@ export class AccessToken {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
+        "User-Agent": this.userAgent,
       },
       body: body.toString(),
     });

@@ -46,6 +46,10 @@ describe("TastytradeHttpClient", () => {
     expect(result).toEqual({ items: [{ accountNumber: "5WX" }] });
     expect(calls[0]?.url).toBe("https://api.example.com/oauth/token");
     expect(calls[0]?.init.body).toContain("grant_type=refresh_token");
+    // tastytrade's prod WAF 401s requests with no UA or `User-Agent: node`
+    const tokenHeaders = calls[0]!.init.headers as Record<string, string>;
+    expect(tokenHeaders["User-Agent"]).toBeTruthy();
+    expect(tokenHeaders["User-Agent"]).not.toBe("node");
     const apiCall = calls[1];
     expect(apiCall).toBeDefined();
     expect((apiCall!.init.headers as Record<string, string>).Authorization).toBe("Bearer acc-1");
