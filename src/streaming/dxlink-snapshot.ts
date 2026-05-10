@@ -14,6 +14,7 @@ export type QuoteSnapshot = {
 type Outgoing = Record<string, unknown> & { type: string; channel?: number };
 
 const CHANNEL = 3;
+const REQUESTED_FIELDS = ["eventType", "eventSymbol", "bidPrice", "askPrice", "bidSize", "askSize", "time"] as const;
 
 export const getQuoteSnapshot = async (
   http: TastytradeHttpClient,
@@ -27,6 +28,9 @@ export const getQuoteSnapshot = async (
   const send = (msg: Outgoing): void => {
     ws.send(JSON.stringify(msg));
   };
+
+  let agreedFields: string[] | null = null;
+  let subscribed = false;
 
   return new Promise<QuoteSnapshot>((resolve, reject) => {
     const cleanup = (): void => {
@@ -61,18 +65,19 @@ export const getQuoteSnapshot = async (
     });
 
     ws.on("message", (raw) => {
-      let msg: { type?: string; channel?: number; data?: unknown };
+      let msg: Record<string, unknown>;
       try {
-        msg = JSON.parse(raw.toString()) as { type?: string; channel?: number; data?: unknown };
+        msg = JSON.parse(raw.toString()) as Record<string, unknown>;
       } catch {
         return;
       }
-      switch (msg.type) {
+      const type = msg.type as string | undefined;
+      switch (type) {
         case "SETUP":
           send({ type: "AUTH", channel: 0, token });
           break;
         case "AUTH_STATE":
-          if ((msg as { state?: string }).state === "AUTHORIZED") {
+          if (msg.state === "AUTHORIZED") {
             send({
               type: "CHANNEL_REQUEST",
               channel: CHANNEL,
@@ -87,29 +92,26 @@ export const getQuoteSnapshot = async (
             channel: CHANNEL,
             acceptAggregationPeriod: 0.1,
             acceptDataFormat: "COMPACT",
-            acceptEventFields: {
-              Quote: [
-                "eventType",
-                "eventSymbol",
-                "bidPrice",
-                "askPrice",
-                "bidSize",
-                "askSize",
-                "time",
-              ],
-            },
+            acceptEventFields: { Quote: REQUESTED_FIELDS },
           });
           break;
-        case "FEED_CONFIG":
-          send({
-            type: "FEED_SUBSCRIPTION",
-            channel: CHANNEL,
-            reset: true,
-            add: [{ type: "Quote", symbol }],
-          });
+        case "FEED_CONFIG": {
+          const eventFields = (msg.eventFields as { Quote?: string[] } | undefined)?.Quote;
+          if (eventFields) agreedFields = eventFields;
+          if (!subscribed) {
+            subscribed = true;
+            send({
+              type: "FEED_SUBSCRIPTION",
+              channel: CHANNEL,
+              reset: true,
+              add: [{ type: "Quote", symbol }],
+            });
+          }
           break;
+        }
         case "FEED_DATA": {
-          const quote = parseCompactQuoteData(msg.data, symbol);
+          const fields = agreedFields ?? [...REQUESTED_FIELDS];
+          const quote = parseCompactQuoteData(msg.data, fields, symbol);
           if (quote) {
             cleanup();
             resolve(quote);
@@ -123,27 +125,40 @@ export const getQuoteSnapshot = async (
   });
 };
 
-const parseCompactQuoteData = (data: unknown, expected: string): QuoteSnapshot | null => {
+const parseCompactQuoteData = (
+  data: unknown,
+  fields: string[],
+  expected: string,
+): QuoteSnapshot | null => {
   if (!Array.isArray(data) || data.length < 2) return null;
-  // COMPACT format: [eventType, [field1, field2, ...]] where the inner array
-  // contains repeated records, each with the fields requested in FEED_SETUP.
-  const [eventType, payload] = data as [unknown, unknown];
-  if (eventType !== "Quote" || !Array.isArray(payload)) return null;
-  const fieldCount = 7; // eventType, eventSymbol, bidPrice, askPrice, bidSize, askSize, time
-  for (let i = 0; i + fieldCount <= payload.length; i += fieldCount) {
-    const sym = payload[i + 1];
-    if (sym !== expected) continue;
-    return {
-      symbol: expected,
-      bidPrice: numOrNull(payload[i + 2]),
-      askPrice: numOrNull(payload[i + 3]),
-      bidSize: numOrNull(payload[i + 4]),
-      askSize: numOrNull(payload[i + 5]),
-      eventTime: numOrNull(payload[i + 6]),
-    };
+  const symbolIdx = fields.indexOf("eventSymbol");
+  if (symbolIdx === -1 || fields.length === 0) return null;
+  // COMPACT format: [eventType, [v1, v2, ..., vN, v1, v2, ..., vN, ...]]
+  for (let i = 0; i + 1 < data.length; i += 2) {
+    const eventType = data[i];
+    const payload = data[i + 1];
+    if (eventType !== "Quote" || !Array.isArray(payload)) continue;
+    for (let j = 0; j + fields.length <= payload.length; j += fields.length) {
+      if (payload[j + symbolIdx] !== expected) continue;
+      return {
+        symbol: expected,
+        bidPrice: numOrNull(payload[j + fields.indexOf("bidPrice")]),
+        askPrice: numOrNull(payload[j + fields.indexOf("askPrice")]),
+        bidSize: numOrNull(payload[j + fields.indexOf("bidSize")]),
+        askSize: numOrNull(payload[j + fields.indexOf("askSize")]),
+        eventTime: numOrNull(payload[j + fields.indexOf("time")]),
+      };
+    }
   }
   return null;
 };
 
-const numOrNull = (v: unknown): number | null =>
-  typeof v === "number" && Number.isFinite(v) ? v : null;
+const numOrNull = (v: unknown): number | null => {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    if (v === "NaN" || v === "" || v === "Infinity" || v === "-Infinity") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
