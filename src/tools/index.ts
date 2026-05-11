@@ -11,6 +11,7 @@ import { registerWatchlistReadTools, registerWatchlistWriteTools } from "./watch
 export type ToolContext = {
   http: TastytradeHttpClient;
   allowTrading: boolean;
+  dangerouslyAllowTrading?: boolean;
 };
 
 export const registerTools = (server: McpServer, ctx: ToolContext): void => {
@@ -22,7 +23,8 @@ export const registerTools = (server: McpServer, ctx: ToolContext): void => {
   registerQuoteTools(server, ctx.http);
 
   if (ctx.allowTrading) {
-    registerOrderWriteTools(server, ctx.http);
-    registerWatchlistWriteTools(server, ctx.http);
+    const skipConfirm = ctx.dangerouslyAllowTrading ?? false;
+    registerOrderWriteTools(server, ctx.http, skipConfirm);
+    registerWatchlistWriteTools(server, ctx.http, skipConfirm);
   }
 };

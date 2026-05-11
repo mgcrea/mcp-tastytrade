@@ -8,7 +8,7 @@ Model Context Protocol server for the [TastyTrade](https://tastytrade.com) broke
 - **Native `fetch`** HTTP client. No axios, no `@tastytrade/api` dependency.
 - **TastyTrade dash-case ↔ camelCase** transparent translation.
 - **DXLink quote snapshots** via a short-lived WebSocket — `get_quote(symbol)` returns once and disconnects.
-- **Trading is opt-in.** Mutating tools (`place_order`, `cancel_order`, `replace_order`, `create_watchlist`, `update_watchlist`, `delete_watchlist`) are only registered when `TASTYTRADE_ALLOW_TRADING=1`. Order-placement tools additionally require `confirm: true` in the call args; otherwise they return a dry-run preview.
+- **Trading is opt-in.** Mutating tools (`place_order`, `cancel_order`, `replace_order`, `create_watchlist`, `update_watchlist`, `delete_watchlist`) are only registered when `TASTYTRADE_ALLOW_TRADING=1`. Order-placement tools additionally require `confirm: true` in the call args; otherwise they return a dry-run preview. Set `TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1` to flip the `confirm` default to `true` (auto-submit) — only use if you trust whatever's driving the MCP.
 
 ## Stack
 
@@ -35,7 +35,8 @@ TASTYTRADE_CLIENT_SECRET=...
 TASTYTRADE_REFRESH_TOKEN=...
 TASTYTRADE_SCOPE=read trade
 TASTYTRADE_ENV=prod        # or "cert" for the sandbox
-TASTYTRADE_ALLOW_TRADING=  # set to "1" only if you want order-placement tools
+TASTYTRADE_ALLOW_TRADING=             # "1" to register mutating tools (still gated by per-call confirm:true)
+TASTYTRADE_DANGEROUSLY_ALLOW_TRADING= # "1" to also flip the per-call confirm default to true (auto-submit)
 ```
 
 ## Run
@@ -159,24 +160,24 @@ pnpm docker:push                # pushes both :latest and :<package.json version
 
 ### Read-only (always available)
 
-| Tool                                                                                 | Description                                                             |
-| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| `list_accounts`                                                                      | Customer accounts.                                                      |
-| `get_account`                                                                        | Single account detail.                                                  |
-| `get_customer`                                                                       | Customer profile.                                                       |
-| `get_balances`                                                                       | Cash + margin balances.                                                 |
-| `get_positions`                                                                      | Open / closed positions.                                                |
-| `list_orders`, `get_order`                                                           | Order history / lookup.                                                 |
-| `list_transactions`, `get_transaction`                                               | Account transactions.                                                   |
-| `search_symbols`                                                                     | Symbol search by prefix.                                                |
-| `get_equity`, `get_equity_option`, `get_future`, `get_cryptocurrency`                | Instrument metadata.                                                    |
-| `get_option_chain_summary`                                                           | Per-expiration summary (strike counts, min/max strike). Slim payload.   |
-| `get_option_chain`                                                                   | Filtered chain slice (by expiration / strike range / type), one flat leg per call/put with both OCC and DXLink symbols. |
-| `get_market_metrics`                                                                 | IV rank/percentile, beta, liquidity, IV term structure.                 |
-| `get_dividend_history`, `get_earnings_history`                                       | Corporate event history.                                                |
-| `list_watchlists`, `get_watchlist`, `list_public_watchlists`, `get_public_watchlist` | Watchlists.                                                             |
+| Tool                                                                                 | Description                                                                                                                                  |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_accounts`                                                                      | Customer accounts.                                                                                                                           |
+| `get_account`                                                                        | Single account detail.                                                                                                                       |
+| `get_customer`                                                                       | Customer profile.                                                                                                                            |
+| `get_balances`                                                                       | Cash + margin balances.                                                                                                                      |
+| `get_positions`                                                                      | Open / closed positions.                                                                                                                     |
+| `list_orders`, `get_order`                                                           | Order history / lookup.                                                                                                                      |
+| `list_transactions`, `get_transaction`                                               | Account transactions.                                                                                                                        |
+| `search_symbols`                                                                     | Symbol search by prefix.                                                                                                                     |
+| `get_equity`, `get_equity_option`, `get_future`, `get_cryptocurrency`                | Instrument metadata.                                                                                                                         |
+| `get_option_chain_summary`                                                           | Per-expiration summary (strike counts, min/max strike). Slim payload.                                                                        |
+| `get_option_chain`                                                                   | Filtered chain slice (by expiration / strike range / type), one flat leg per call/put with both OCC and DXLink symbols.                      |
+| `get_market_metrics`                                                                 | IV rank/percentile, beta, liquidity, IV term structure.                                                                                      |
+| `get_dividend_history`, `get_earnings_history`                                       | Corporate event history.                                                                                                                     |
+| `list_watchlists`, `get_watchlist`, `list_public_watchlists`, `get_public_watchlist` | Watchlists.                                                                                                                                  |
 | `get_quote`                                                                          | Snapshot for one symbol via DXLink. Quote (bid/ask/sizes) plus Greeks (delta/gamma/theta/vega/IV) for options. Accepts OCC or DXLink format. |
-| `get_quotes`                                                                         | Batch snapshot for many symbols in a single DXLink connection.          |
+| `get_quotes`                                                                         | Batch snapshot for many symbols in a single DXLink connection.                                                                               |
 
 ### Mutating (only when `TASTYTRADE_ALLOW_TRADING=1`)
 

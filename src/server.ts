@@ -27,6 +27,10 @@ export const createServer = (opts: CreateServerOptions): McpServer => {
     ...(opts.logger ? { logger: opts.logger } : {}),
     userAgent: USER_AGENT,
   });
-  registerTools(server, { http, allowTrading: opts.config.allowTrading });
+  registerTools(server, {
+    http,
+    allowTrading: opts.config.allowTrading,
+    dangerouslyAllowTrading: opts.config.dangerouslyAllowTrading,
+  });
   return server;
 };

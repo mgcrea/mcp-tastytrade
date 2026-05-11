@@ -34,5 +34,16 @@ describe("loadConfig", () => {
       TASTYTRADE_ALLOW_TRADING: "1",
     } as NodeJS.ProcessEnv);
     expect(cfg.allowTrading).toBe(true);
+    expect(cfg.dangerouslyAllowTrading).toBe(false);
+  });
+
+  it("DANGEROUSLY_ALLOW_TRADING implies ALLOW_TRADING", () => {
+    const cfg = loadConfig({
+      TASTYTRADE_CLIENT_SECRET: "s",
+      TASTYTRADE_REFRESH_TOKEN: "r",
+      TASTYTRADE_DANGEROUSLY_ALLOW_TRADING: "1",
+    } as NodeJS.ProcessEnv);
+    expect(cfg.allowTrading).toBe(true);
+    expect(cfg.dangerouslyAllowTrading).toBe(true);
   });
 });

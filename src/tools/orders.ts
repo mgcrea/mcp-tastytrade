@@ -65,17 +65,29 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
   );
 };
 
-export const registerOrderWriteTools = (server: McpServer, http: TastytradeHttpClient): void => {
+export const registerOrderWriteTools = (
+  server: McpServer,
+  http: TastytradeHttpClient,
+  skipConfirm = false,
+): void => {
+  const placeDescription = skipConfirm
+    ? "Submit an order. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — calls submit by default. Pass confirm=false to force a dry-run preview instead."
+    : "Submit an order. Call with confirm=false (default) to validate without submitting — returns TastyTrade's dry-run preview (BP effect, fees, warnings). Call with confirm=true to actually submit.";
+
   server.tool(
     "place_order",
-    "Submit an order. Call with confirm=false (default) to validate without submitting — returns TastyTrade's dry-run preview (BP effect, fees, warnings). Call with confirm=true to actually submit.",
+    placeDescription,
     {
       accountNumber: z.string(),
       order: OrderRequestSchema,
       confirm: z
         .boolean()
-        .default(false)
-        .describe("false (default) returns a dry-run preview; true submits the order."),
+        .default(skipConfirm)
+        .describe(
+          skipConfirm
+            ? "true (default with DANGEROUSLY flag) submits; false forces a dry-run preview."
+            : "false (default) returns a dry-run preview; true submits the order.",
+        ),
     },
     async ({ accountNumber, order, confirm }) =>
       wrap(async () => {
@@ -94,11 +106,13 @@ export const registerOrderWriteTools = (server: McpServer, http: TastytradeHttpC
 
   server.tool(
     "cancel_order",
-    "Cancel an open order.",
+    skipConfirm
+      ? "Cancel an open order. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — cancels immediately by default."
+      : "Cancel an open order.",
     {
       accountNumber: z.string(),
       orderId: z.union([z.string(), z.number()]),
-      confirm: z.boolean().default(false),
+      confirm: z.boolean().default(skipConfirm),
     },
     async ({ accountNumber, orderId, confirm }) =>
       wrap(async () => {
@@ -115,12 +129,14 @@ export const registerOrderWriteTools = (server: McpServer, http: TastytradeHttpC
 
   server.tool(
     "replace_order",
-    "Replace an open order with a new one. confirm=true required.",
+    skipConfirm
+      ? "Replace an open order. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — replaces by default. Pass confirm=false to force a dry-run preview instead."
+      : "Replace an open order with a new one. confirm=true required.",
     {
       accountNumber: z.string(),
       orderId: z.union([z.string(), z.number()]),
       order: OrderRequestSchema,
-      confirm: z.boolean().default(false),
+      confirm: z.boolean().default(skipConfirm),
     },
     async ({ accountNumber, orderId, order, confirm }) =>
       wrap(async () => {

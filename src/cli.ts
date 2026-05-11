@@ -17,9 +17,17 @@ const main = async (): Promise<void> => {
   const server = createServer({ config, logger: stderrLogger });
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  stderrLogger.warn(
-    `tastytrade-mcp connected (env=${config.env}, trading=${config.allowTrading ? "on" : "off"})`,
-  );
+  const tradingMode = config.dangerouslyAllowTrading
+    ? "DANGEROUSLY-AUTO-SUBMIT"
+    : config.allowTrading
+      ? "on"
+      : "off";
+  stderrLogger.warn(`tastytrade-mcp connected (env=${config.env}, trading=${tradingMode})`);
+  if (config.dangerouslyAllowTrading) {
+    stderrLogger.warn(
+      "⚠️  TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 — orders submit immediately, no confirm gate.",
+    );
+  }
 };
 
 main().catch((err: unknown) => {

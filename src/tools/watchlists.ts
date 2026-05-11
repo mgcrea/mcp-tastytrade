@@ -50,6 +50,7 @@ export const registerWatchlistReadTools = (server: McpServer, http: TastytradeHt
 export const registerWatchlistWriteTools = (
   server: McpServer,
   http: TastytradeHttpClient,
+  skipConfirm = false,
 ): void => {
   server.tool(
     "create_watchlist",
@@ -65,8 +66,10 @@ export const registerWatchlistWriteTools = (
   );
   server.tool(
     "delete_watchlist",
-    "Delete a private watchlist by name.",
-    { name: z.string(), confirm: z.boolean().default(false) },
+    skipConfirm
+      ? "Delete a private watchlist. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — deletes immediately by default."
+      : "Delete a private watchlist by name.",
+    { name: z.string(), confirm: z.boolean().default(skipConfirm) },
     async ({ name, confirm }) =>
       wrap(async () => {
         if (!confirm) {

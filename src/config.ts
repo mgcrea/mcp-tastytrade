@@ -15,18 +15,24 @@ const ConfigSchema = z.object({
   env: TastytradeEnv.default("prod"),
   baseUrl: z.string().url().optional(),
   allowTrading: z.boolean().default(false),
+  dangerouslyAllowTrading: z.boolean().default(false),
 });
 
 export type Config = z.infer<typeof ConfigSchema> & { baseUrl: string };
 
+const isTruthy = (v: string | undefined): boolean => v === "1" || v === "true";
+
 export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
+  const dangerouslyAllowTrading = isTruthy(env.TASTYTRADE_DANGEROUSLY_ALLOW_TRADING);
   const parsed = ConfigSchema.parse({
     clientSecret: env.TASTYTRADE_CLIENT_SECRET,
     refreshToken: env.TASTYTRADE_REFRESH_TOKEN,
     scope: env.TASTYTRADE_SCOPE,
     env: env.TASTYTRADE_ENV,
     baseUrl: env.TASTYTRADE_BASE_URL,
-    allowTrading: env.TASTYTRADE_ALLOW_TRADING === "1" || env.TASTYTRADE_ALLOW_TRADING === "true",
+    // dangerouslyAllowTrading implies allowTrading — otherwise the tools wouldn't even register.
+    allowTrading: isTruthy(env.TASTYTRADE_ALLOW_TRADING) || dangerouslyAllowTrading,
+    dangerouslyAllowTrading,
   });
 
   return {

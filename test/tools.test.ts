@@ -19,17 +19,25 @@ const buildHttp = () =>
     fetch: stubFetch,
   });
 
-const captureToolNames = (allowTrading: boolean): string[] => {
+type CapturedTool = { name: string; schema: Record<string, unknown> };
+
+const captureTools = (
+  allowTrading: boolean,
+  dangerouslyAllowTrading = false,
+): { names: string[]; tools: CapturedTool[] } => {
   const server = new McpServer({ name: "test", version: "0.0.0" });
-  const names: string[] = [];
+  const tools: CapturedTool[] = [];
   const original = server.tool.bind(server) as McpServer["tool"];
   vi.spyOn(server, "tool").mockImplementation(((...args: unknown[]) => {
-    names.push(args[0] as string);
+    // server.tool(name, description, paramsShape, handler)
+    tools.push({ name: args[0] as string, schema: args[2] as Record<string, unknown> });
     return (original as (...a: unknown[]) => unknown)(...args);
   }) as McpServer["tool"]);
-  registerTools(server, { http: buildHttp(), allowTrading });
-  return names;
+  registerTools(server, { http: buildHttp(), allowTrading, dangerouslyAllowTrading });
+  return { names: tools.map((t) => t.name), tools };
 };
+
+const captureToolNames = (allowTrading: boolean): string[] => captureTools(allowTrading).names;
 
 describe("tool registration", () => {
   it("registers read-only tools by default", () => {
@@ -58,5 +66,25 @@ describe("tool registration", () => {
     expect(names).toContain("create_watchlist");
     expect(names).toContain("update_watchlist");
     expect(names).toContain("delete_watchlist");
+  });
+
+  it("flips confirm default to true when dangerouslyAllowTrading is set", async () => {
+    const { tools } = captureTools(true, true);
+    const place = tools.find((t) => t.name === "place_order");
+    expect(place).toBeDefined();
+    // The confirm field is a zod schema; parse with no arg → uses its default
+    const confirmSchema = place!.schema.confirm as { parse: (v: unknown) => unknown };
+    expect(confirmSchema.parse(undefined)).toBe(true);
+
+    const cancel = tools.find((t) => t.name === "cancel_order");
+    const cancelConfirm = cancel!.schema.confirm as { parse: (v: unknown) => unknown };
+    expect(cancelConfirm.parse(undefined)).toBe(true);
+  });
+
+  it("keeps confirm default at false when dangerouslyAllowTrading is off", () => {
+    const { tools } = captureTools(true, false);
+    const place = tools.find((t) => t.name === "place_order");
+    const confirmSchema = place!.schema.confirm as { parse: (v: unknown) => unknown };
+    expect(confirmSchema.parse(undefined)).toBe(false);
   });
 });
