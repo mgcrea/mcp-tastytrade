@@ -12,6 +12,7 @@ export type QuoteFields = {
   bidSize: number | null;
   askSize: number | null;
   eventTime: number | null;
+  eventTimeIso: string | null;
 };
 
 export type GreeksFields = {
@@ -260,12 +261,14 @@ const extractRecord = (
     return idx === -1 ? null : numOrNull(payload[base + idx]);
   };
   if (eventType === "Quote") {
+    const eventTime = at("time");
     return {
       bidPrice: at("bidPrice"),
       askPrice: at("askPrice"),
       bidSize: at("bidSize"),
       askSize: at("askSize"),
-      eventTime: at("time"),
+      eventTime,
+      eventTimeIso: epochMsToIso(eventTime),
     };
   }
   return {
@@ -293,6 +296,17 @@ const mergeRecord = (
   if (type === "Quote") entry.quote = rec as QuoteFields;
   else entry.greeks = rec as GreeksFields;
   entry.types.add(type);
+};
+
+// DXLink Quote `time` is ms since epoch. Treat anything < 2001-01-01 as bogus.
+const MIN_VALID_EPOCH_MS = 978307200000;
+const epochMsToIso = (ms: number | null): string | null => {
+  if (ms === null || !Number.isFinite(ms) || ms < MIN_VALID_EPOCH_MS) return null;
+  try {
+    return new Date(ms).toISOString();
+  } catch {
+    return null;
+  }
 };
 
 const numOrNull = (v: unknown): number | null => {
