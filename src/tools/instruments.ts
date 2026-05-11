@@ -6,7 +6,6 @@ import {
   getEquity,
   getEquityOption,
   getFuture,
-  getOptionChainCompact,
   getOptionChainNested,
 } from "../client/endpoints/instruments.js";
 import {
@@ -16,6 +15,12 @@ import {
 } from "../client/endpoints/market-metrics.js";
 import { searchSymbols } from "../client/endpoints/symbol-search.js";
 import type { TastytradeHttpClient } from "../client/http.js";
+import {
+  isFilterEmpty,
+  type RawChainRoot,
+  sliceChain,
+  summarizeChain,
+} from "../lib/option-chain.js";
 import { wrap } from "./util.js";
 
 export const registerInstrumentTools = (server: McpServer, http: TastytradeHttpClient): void => {
@@ -42,15 +47,40 @@ export const registerInstrumentTools = (server: McpServer, http: TastytradeHttpC
   );
 
   server.tool(
+    "get_option_chain_summary",
+    "Summarize all expirations for an underlying: one line per expiration with strike count and min/max strike. Tiny payload — use this first to pick an expiration, then call get_option_chain with a filter.",
+    { underlyingSymbol: z.string() },
+    async ({ underlyingSymbol }) =>
+      wrap(async () => {
+        const raw = await getOptionChainNested(http, underlyingSymbol);
+        const root = (raw.items?.[0] ?? raw) as RawChainRoot;
+        return summarizeChain(root);
+      }),
+  );
+
+  server.tool(
     "get_option_chain",
-    "Get the option chain for an underlying symbol (nested by default; pass format=compact for the flat layout).",
-    { underlyingSymbol: z.string(), format: z.enum(["nested", "compact"]).default("nested") },
-    async ({ underlyingSymbol, format }) =>
-      wrap(() =>
-        format === "compact"
-          ? getOptionChainCompact(http, underlyingSymbol)
-          : getOptionChainNested(http, underlyingSymbol),
-      ),
+    "Filtered option chain for an underlying. Returns a flat array of legs (one per call/put per strike) with both OCC and DXLink streamer symbols. If called without any filter, falls back to get_option_chain_summary's shape to avoid 200+ KB responses.",
+    {
+      underlyingSymbol: z.string(),
+      expirationDate: z.string().optional().describe("Exact YYYY-MM-DD"),
+      daysToExpirationMin: z.number().int().nonnegative().optional(),
+      daysToExpirationMax: z.number().int().positive().optional(),
+      strikeMin: z.number().positive().optional(),
+      strikeMax: z.number().positive().optional(),
+      strikeAround: z
+        .object({ center: z.number().positive(), count: z.number().int().positive().max(200) })
+        .optional()
+        .describe("Pick the N strikes nearest `center`."),
+      optionType: z.enum(["call", "put", "both"]).optional(),
+    },
+    async ({ underlyingSymbol, ...filter }) =>
+      wrap(async () => {
+        const raw = await getOptionChainNested(http, underlyingSymbol);
+        const root = (raw.items?.[0] ?? raw) as RawChainRoot;
+        if (isFilterEmpty(filter)) return summarizeChain(root);
+        return sliceChain(root, filter);
+      }),
   );
 
   server.tool(
@@ -69,7 +99,7 @@ export const registerInstrumentTools = (server: McpServer, http: TastytradeHttpC
 
   server.tool(
     "get_market_metrics",
-    "Get IV rank/percentile, beta, liquidity, etc. for one or more symbols.",
+    "Get IV rank/percentile, beta, liquidity, IV term structure, etc. for one or more symbols. Note: fields like dividendNextDate / earningsNextDate reflect the last known scheduled event and may be in the past if no upcoming event has been announced.",
     { symbols: z.array(z.string()).min(1).max(100) },
     async ({ symbols }) => wrap(() => getMarketMetrics(http, symbols)),
   );
