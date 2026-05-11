@@ -15,12 +15,14 @@ import {
 } from "../client/endpoints/market-metrics.js";
 import { searchSymbols } from "../client/endpoints/symbol-search.js";
 import type { TastytradeHttpClient } from "../client/http.js";
+import { computeExpectedMove, pickAtmStrike, pickExpiration } from "../lib/expected-move.js";
 import {
   isFilterEmpty,
   type RawChainRoot,
   sliceChain,
   summarizeChain,
 } from "../lib/option-chain.js";
+import { getMarketSnapshots } from "../streaming/dxlink-snapshot.js";
 import { wrap } from "./util.js";
 
 export const registerInstrumentTools = (server: McpServer, http: TastytradeHttpClient): void => {
@@ -80,6 +82,63 @@ export const registerInstrumentTools = (server: McpServer, http: TastytradeHttpC
         const root = (raw.items?.[0] ?? raw) as RawChainRoot;
         if (isFilterEmpty(filter)) return summarizeChain(root);
         return sliceChain(root, filter);
+      }),
+  );
+
+  server.tool(
+    "get_expected_move",
+    "Compute the ATM straddle expected ±1σ move for an underlying at a given expiration. Returns underlying spot, ATM strike, call/put mids, the straddle price (≈ 1σ move in $), upper/lower bounds, and an IV-implied move for cross-check. Requires either `expirationDate` (exact YYYY-MM-DD) or `daysToExpiration` (nearest match). Issues two short-lived DXLink snapshots (spot, then ATM call+put).",
+    {
+      underlyingSymbol: z.string(),
+      expirationDate: z.string().optional().describe("Exact YYYY-MM-DD"),
+      daysToExpiration: z
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .describe("If expirationDate is omitted, pick the expiration with DTE nearest this value"),
+    },
+    async ({ underlyingSymbol, expirationDate, daysToExpiration }) =>
+      wrap(async () => {
+        if (!expirationDate && daysToExpiration === undefined) {
+          throw new Error("Provide either expirationDate or daysToExpiration");
+        }
+        const raw = await getOptionChainNested(http, underlyingSymbol);
+        const root = (raw.items?.[0] ?? raw) as RawChainRoot;
+        const expiration = pickExpiration(root, {
+          ...(expirationDate ? { expirationDate } : {}),
+          ...(daysToExpiration !== undefined ? { daysToExpiration } : {}),
+        });
+
+        const [underlyingSnap] = await getMarketSnapshots(http, [underlyingSymbol], {
+          types: ["Quote"],
+        });
+        const bid = underlyingSnap?.quote?.bidPrice ?? null;
+        const ask = underlyingSnap?.quote?.askPrice ?? null;
+        const spot = bid !== null && ask !== null ? (bid + ask) / 2 : null;
+        if (spot === null) {
+          throw new Error(`Could not get spot quote for ${underlyingSymbol}`);
+        }
+
+        const atmStrike = pickAtmStrike(expiration, spot);
+        const optionSnaps = await getMarketSnapshots(
+          http,
+          [atmStrike.callStreamerSymbol, atmStrike.putStreamerSymbol],
+          { types: ["Quote", "Greeks"] },
+        );
+        const callSnap = optionSnaps.find(
+          (s) => s.dxlinkSymbol === atmStrike.callStreamerSymbol,
+        );
+        const putSnap = optionSnaps.find((s) => s.dxlinkSymbol === atmStrike.putStreamerSymbol);
+
+        return computeExpectedMove(
+          underlyingSymbol,
+          spot,
+          expiration,
+          atmStrike,
+          callSnap,
+          putSnap,
+        );
       }),
   );
 
