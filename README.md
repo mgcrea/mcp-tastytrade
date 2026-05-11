@@ -102,12 +102,19 @@ The container runs `node /app/dist/cli.js` as PID 1 and speaks JSON-RPC over std
       "type": "stdio",
       "command": "docker",
       "args": [
-        "run", "--rm", "-i",
-        "-e", "TASTYTRADE_CLIENT_SECRET",
-        "-e", "TASTYTRADE_REFRESH_TOKEN",
-        "-e", "TASTYTRADE_SCOPE",
-        "-e", "TASTYTRADE_ENV",
-        "-e", "TASTYTRADE_ALLOW_TRADING",
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "TASTYTRADE_CLIENT_SECRET",
+        "-e",
+        "TASTYTRADE_REFRESH_TOKEN",
+        "-e",
+        "TASTYTRADE_SCOPE",
+        "-e",
+        "TASTYTRADE_ENV",
+        "-e",
+        "TASTYTRADE_ALLOW_TRADING",
         "mgcrea/mcp-tastytrade:latest"
       ],
       "env": {
@@ -160,15 +167,16 @@ pnpm docker:push                # pushes both :latest and :<package.json version
 | `get_balances`                                                                       | Cash + margin balances.                                                 |
 | `get_positions`                                                                      | Open / closed positions.                                                |
 | `list_orders`, `get_order`                                                           | Order history / lookup.                                                 |
-| `dry_run_order`                                                                      | Validate an order without submitting.                                   |
 | `list_transactions`, `get_transaction`                                               | Account transactions.                                                   |
 | `search_symbols`                                                                     | Symbol search by prefix.                                                |
 | `get_equity`, `get_equity_option`, `get_future`, `get_cryptocurrency`                | Instrument metadata.                                                    |
-| `get_option_chain`                                                                   | Nested or compact option chain for an underlying.                       |
-| `get_market_metrics`                                                                 | IV rank/percentile, beta, liquidity for symbols.                        |
+| `get_option_chain_summary`                                                           | Per-expiration summary (strike counts, min/max strike). Slim payload.   |
+| `get_option_chain`                                                                   | Filtered chain slice (by expiration / strike range / type), one flat leg per call/put with both OCC and DXLink symbols. |
+| `get_market_metrics`                                                                 | IV rank/percentile, beta, liquidity, IV term structure.                 |
 | `get_dividend_history`, `get_earnings_history`                                       | Corporate event history.                                                |
 | `list_watchlists`, `get_watchlist`, `list_public_watchlists`, `get_public_watchlist` | Watchlists.                                                             |
-| `get_quote`                                                                          | Real-time bid/ask snapshot via DXLink (single event, then disconnects). |
+| `get_quote`                                                                          | Snapshot for one symbol via DXLink. Quote (bid/ask/sizes) plus Greeks (delta/gamma/theta/vega/IV) for options. Accepts OCC or DXLink format. |
+| `get_quotes`                                                                         | Batch snapshot for many symbols in a single DXLink connection.          |
 
 ### Mutating (only when `TASTYTRADE_ALLOW_TRADING=1`)
 
