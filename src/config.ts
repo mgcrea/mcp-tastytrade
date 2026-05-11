@@ -16,11 +16,18 @@ const ConfigSchema = z.object({
   baseUrl: z.string().url().optional(),
   allowTrading: z.boolean().default(false),
   dangerouslyAllowTrading: z.boolean().default(false),
+  dxlinkIdleTimeoutMs: z.number().int().positive().default(30_000),
 });
 
 export type Config = z.infer<typeof ConfigSchema> & { baseUrl: string };
 
 const isTruthy = (v: string | undefined): boolean => v === "1" || v === "true";
+
+const parseNumberOpt = (v: string | undefined): number | undefined => {
+  if (v === undefined || v === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
 
 export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
   const dangerouslyAllowTrading = isTruthy(env.TASTYTRADE_DANGEROUSLY_ALLOW_TRADING);
@@ -33,6 +40,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     // dangerouslyAllowTrading implies allowTrading — otherwise the tools wouldn't even register.
     allowTrading: isTruthy(env.TASTYTRADE_ALLOW_TRADING) || dangerouslyAllowTrading,
     dangerouslyAllowTrading,
+    dxlinkIdleTimeoutMs: parseNumberOpt(env.TASTYTRADE_DXLINK_IDLE_TIMEOUT_MS),
   });
 
   return {

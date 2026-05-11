@@ -22,10 +22,15 @@ import {
   sliceChain,
   summarizeChain,
 } from "../lib/option-chain.js";
+import type { DxlinkSession } from "../streaming/dxlink-session.js";
 import { getMarketSnapshots } from "../streaming/dxlink-snapshot.js";
 import { wrap } from "./util.js";
 
-export const registerInstrumentTools = (server: McpServer, http: TastytradeHttpClient): void => {
+export const registerInstrumentTools = (
+  server: McpServer,
+  http: TastytradeHttpClient,
+  session: DxlinkSession,
+): void => {
   server.tool(
     "search_symbols",
     "Search for tradable symbols by prefix.",
@@ -110,7 +115,7 @@ export const registerInstrumentTools = (server: McpServer, http: TastytradeHttpC
           ...(daysToExpiration !== undefined ? { daysToExpiration } : {}),
         });
 
-        const [underlyingSnap] = await getMarketSnapshots(http, [underlyingSymbol], {
+        const [underlyingSnap] = await getMarketSnapshots(session, [underlyingSymbol], {
           types: ["Quote"],
         });
         const bid = underlyingSnap?.quote?.bidPrice ?? null;
@@ -122,7 +127,7 @@ export const registerInstrumentTools = (server: McpServer, http: TastytradeHttpC
 
         const atmStrike = pickAtmStrike(expiration, spot);
         const optionSnaps = await getMarketSnapshots(
-          http,
+          session,
           [atmStrike.callStreamerSymbol, atmStrike.putStreamerSymbol],
           { types: ["Quote", "Greeks"] },
         );

@@ -7,7 +7,7 @@ Model Context Protocol server for the [TastyTrade](https://tastytrade.com) broke
 - **OAuth2 personal grant** auth (client_secret + refresh_token), automatic refresh on expiry and on 401.
 - **Native `fetch`** HTTP client. No axios, no `@tastytrade/api` dependency.
 - **TastyTrade dash-case ↔ camelCase** transparent translation.
-- **DXLink quote snapshots** via a short-lived WebSocket — `get_quote(symbol)` returns once and disconnects.
+- **DXLink quote snapshots** over a long-lived WebSocket — `get_quote(symbol)` reuses the connection across calls and caches last-known values, so repeat queries return in <50ms instead of paying ~3–5s of auth/setup. The connection idles closed after `TASTYTRADE_DXLINK_IDLE_TIMEOUT_MS` (default 30 s) of inactivity and reconnects on the next call.
 - **Trading is opt-in.** Mutating tools (`place_order`, `cancel_order`, `replace_order`, `create_watchlist`, `update_watchlist`, `delete_watchlist`) are only registered when `TASTYTRADE_ALLOW_TRADING=1`. Order-placement tools additionally require `confirm: true` in the call args; otherwise they return a dry-run preview. Set `TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1` to flip the `confirm` default to `true` (auto-submit) — only use if you trust whatever's driving the MCP.
 
 ## Stack
@@ -37,6 +37,7 @@ TASTYTRADE_SCOPE=read trade
 TASTYTRADE_ENV=prod        # or "cert" for the sandbox
 TASTYTRADE_ALLOW_TRADING=             # "1" to register mutating tools (still gated by per-call confirm:true)
 TASTYTRADE_DANGEROUSLY_ALLOW_TRADING= # "1" to also flip the per-call confirm default to true (auto-submit)
+TASTYTRADE_DXLINK_IDLE_TIMEOUT_MS=    # how long to keep the DXLink WS open after the last quote call (default 30000)
 ```
 
 ## Run

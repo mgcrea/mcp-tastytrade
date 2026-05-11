@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { describe, expect, it, vi } from "vitest";
 
 import { TastytradeHttpClient } from "../src/client/http.js";
+import { DxlinkSession } from "../src/streaming/dxlink-session.js";
 import { registerTools } from "../src/tools/index.js";
 
 const stubFetch = vi.fn(
@@ -33,7 +34,17 @@ const captureTools = (
     tools.push({ name: args[0] as string, schema: args[2] as Record<string, unknown> });
     return (original as (...a: unknown[]) => unknown)(...args);
   }) as McpServer["tool"]);
-  registerTools(server, { http: buildHttp(), allowTrading, dangerouslyAllowTrading });
+  const http = buildHttp();
+  const session = new DxlinkSession(http, {
+    // Tests never actually fire a WS — but supply a stub factory so the type-check holds.
+    wsFactory: () => ({
+      on: () => undefined,
+      send: () => undefined,
+      close: () => undefined,
+    }),
+    getToken: async () => ({ token: "t", dxlinkUrl: "wss://dxlink.example/" }),
+  });
+  registerTools(server, { http, session, allowTrading, dangerouslyAllowTrading });
   return { names: tools.map((t) => t.name), tools };
 };
 

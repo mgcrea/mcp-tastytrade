@@ -14,7 +14,7 @@ const stderrLogger = {
 
 const main = async (): Promise<void> => {
   const config = loadConfig();
-  const server = createServer({ config, logger: stderrLogger });
+  const { server, session } = createServer({ config, logger: stderrLogger });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   const tradingMode = config.dangerouslyAllowTrading
@@ -28,6 +28,14 @@ const main = async (): Promise<void> => {
       "⚠️  TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 — orders submit immediately, no confirm gate.",
     );
   }
+
+  const shutdown = async (signal: string): Promise<void> => {
+    stderrLogger.warn(`received ${signal}, closing session`);
+    await session.close();
+    process.exit(0);
+  };
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
 };
 
 main().catch((err: unknown) => {

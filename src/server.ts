@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { TastytradeHttpClient, type Logger } from "./client/http.js";
 import type { Config } from "./config.js";
+import { DxlinkSession } from "./streaming/dxlink-session.js";
 import { registerTools } from "./tools/index.js";
 
 export const SERVER_NAME = "@mgcrea/mcp-tastytrade";
@@ -14,7 +15,12 @@ export type CreateServerOptions = {
   logger?: Logger;
 };
 
-export const createServer = (opts: CreateServerOptions): McpServer => {
+export type CreatedServer = {
+  server: McpServer;
+  session: DxlinkSession;
+};
+
+export const createServer = (opts: CreateServerOptions): CreatedServer => {
   const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
   const http = new TastytradeHttpClient({
     baseUrl: opts.config.baseUrl,
@@ -27,10 +33,15 @@ export const createServer = (opts: CreateServerOptions): McpServer => {
     ...(opts.logger ? { logger: opts.logger } : {}),
     userAgent: USER_AGENT,
   });
+  const session = new DxlinkSession(http, {
+    idleTimeoutMs: opts.config.dxlinkIdleTimeoutMs,
+    ...(opts.logger ? { logger: opts.logger } : {}),
+  });
   registerTools(server, {
     http,
+    session,
     allowTrading: opts.config.allowTrading,
     dangerouslyAllowTrading: opts.config.dangerouslyAllowTrading,
   });
-  return server;
+  return { server, session };
 };
