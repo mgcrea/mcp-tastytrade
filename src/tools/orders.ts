@@ -63,27 +63,19 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
     { accountNumber: z.string(), orderId: z.union([z.string(), z.number()]) },
     async ({ accountNumber, orderId }) => wrap(() => getOrder(http, accountNumber, orderId)),
   );
-
-  server.tool(
-    "dry_run_order",
-    "Validate an order against TastyTrade's risk and margin checks without submitting it. Always available.",
-    { accountNumber: z.string(), order: OrderRequestSchema },
-    async ({ accountNumber, order }) =>
-      wrap(() => dryRunOrder(http, accountNumber, order as OrderRequest)),
-  );
 };
 
 export const registerOrderWriteTools = (server: McpServer, http: TastytradeHttpClient): void => {
   server.tool(
     "place_order",
-    "Submit an order to the market. Without confirm=true, returns a dry-run preview instead of submitting.",
+    "Submit an order. Call with confirm=false (default) to validate without submitting — returns TastyTrade's dry-run preview (BP effect, fees, warnings). Call with confirm=true to actually submit.",
     {
       accountNumber: z.string(),
       order: OrderRequestSchema,
       confirm: z
         .boolean()
         .default(false)
-        .describe("Must be true to actually submit; otherwise returns a dry-run preview."),
+        .describe("false (default) returns a dry-run preview; true submits the order."),
     },
     async ({ accountNumber, order, confirm }) =>
       wrap(async () => {
