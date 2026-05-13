@@ -52,6 +52,26 @@ export type DxlinkSessionOptions = {
 
 type ConnState = "idle" | "connecting" | "ready" | "reconnecting" | "closed";
 
+export type SessionDiagnostics = {
+  state: ConnState;
+  subscribedSymbols: string[];
+  onWire: number;
+  pendingRemoves: number;
+  refcountTotal: number;
+  cachedSymbols: number;
+  reconnectAttempts: number;
+  unauthorizedAttempts: number;
+  lastConnectedAt: string | null;
+  lastError: string | null;
+  // What TT routed us to (host without query) — surfaces env-mismatch /
+  // cluster-routing issues without leaking the token.
+  lastDxlinkUrl: string | null;
+  // The most recent non-AUTHORIZED AUTH_STATE body received from DXLink.
+  // TT sometimes includes a reason / error field here; surfacing it is the
+  // fastest way to discriminate scope vs grant vs cluster vs token issues.
+  lastAuthState: Record<string, unknown> | null;
+};
+
 type CacheEntry = {
   quote?: QuoteFields;
   greeks?: GreeksFields;
@@ -82,6 +102,10 @@ export class DxlinkSession {
   private keepaliveTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
   private unauthorizedAttempts = 0;
+  private lastConnectedAt: number | null = null;
+  private lastError: string | null = null;
+  private lastDxlinkUrl: string | null = null;
+  private lastAuthState: Record<string, unknown> | null = null;
   // When true, the next ws-close handler should not schedule a reconnect
   // (caller is permanently giving up for this attempt cycle).
   private gaveUpThisCycle = false;
@@ -160,6 +184,26 @@ export class DxlinkSession {
         greeks: entry?.greeks ?? null,
       };
     });
+  }
+
+  getDiagnostics(): SessionDiagnostics {
+    let refcountTotal = 0;
+    for (const n of this.refcounts.values()) refcountTotal += n;
+    return {
+      state: this.state,
+      subscribedSymbols: [...new Set(Array.from(this.refcounts.keys()).map((k) => k.split("|")[0]!))],
+      onWire: this.onWire.size,
+      pendingRemoves: this.pendingRemoves.size,
+      refcountTotal,
+      cachedSymbols: this.cache.size,
+      reconnectAttempts: this.reconnectAttempts,
+      unauthorizedAttempts: this.unauthorizedAttempts,
+      lastConnectedAt:
+        this.lastConnectedAt !== null ? new Date(this.lastConnectedAt).toISOString() : null,
+      lastError: this.lastError,
+      lastDxlinkUrl: this.lastDxlinkUrl,
+      lastAuthState: this.lastAuthState,
+    };
   }
 
   async close(): Promise<void> {
@@ -259,9 +303,16 @@ export class DxlinkSession {
     if (this.state === "closed") return;
     this.state = "connecting";
     try {
+      this.logger.debug?.("dxlink: fetching api-quote-token");
       const tok = await this.getToken();
       if ((this.state as ConnState) === "closed") return;
       this.token = tok.token;
+      // Record sanitized url (origin only) so diagnostics surface cluster-routing
+      // without exposing query-string tokens TT may attach to the URL.
+      this.lastDxlinkUrl = sanitizeUrl(tok.dxlinkUrl);
+      this.logger.debug?.(
+        `dxlink: got api-quote-token (length=${tok.token.length}, url=${this.lastDxlinkUrl}); opening WS`,
+      );
       const ws = this.wsFactory(tok.dxlinkUrl);
       this.ws = ws;
       ws.on("open", () => this.handleOpen());
@@ -269,6 +320,7 @@ export class DxlinkSession {
       ws.on("error", (err: unknown) => this.logger.warn?.("dxlink: ws error", err));
       ws.on("close", () => this.handleClose());
     } catch (err) {
+      this.lastError = err instanceof Error ? err.message : String(err);
       this.logger.warn?.("dxlink: token/connect failed", err);
       this.scheduleReconnect();
     }
@@ -303,6 +355,7 @@ export class DxlinkSession {
       case "AUTH_STATE":
         if (msg.state === "AUTHORIZED") {
           this.unauthorizedAttempts = 0;
+          this.lastAuthState = null;
           this.startKeepalive();
           this.send({
             type: "CHANNEL_REQUEST",
@@ -312,6 +365,11 @@ export class DxlinkSession {
           });
         } else if (msg.state === "UNAUTHORIZED") {
           this.unauthorizedAttempts += 1;
+          // Capture the full AUTH_STATE body — TT sometimes includes a reason
+          // / error field that the canned "UNAUTHORIZED" log line hides.
+          this.lastAuthState = msg;
+          this.lastError = `DXLink UNAUTHORIZED ${JSON.stringify(msg)}`;
+          this.logger.warn?.("dxlink: AUTH_STATE body:", JSON.stringify(msg));
           this.token = null;
           // Force fresh OAuth on the next api-quote-tokens fetch — the cached
           // access token may have been revoked or rescoped.
@@ -361,6 +419,8 @@ export class DxlinkSession {
         if (this.state !== "ready") {
           this.state = "ready";
           this.reconnectAttempts = 0;
+          this.lastConnectedAt = this.now();
+          this.lastError = null;
           this.replaySubscriptions();
           this.resolveReadyPromise();
         }
@@ -439,6 +499,7 @@ export class DxlinkSession {
   }
 
   private failReady(err: Error): void {
+    this.lastError = err.message;
     const reject = this.rejectReady;
     this.readyPromise = null;
     this.resolveReady = null;
@@ -638,4 +699,15 @@ const extractRecord = (
     rho: at("rho"),
     vega: at("vega"),
   };
+};
+
+// Drop the query string (which on some routes carries auth material) and return
+// just the protocol + host + path. Always returns a string, even on malformed input.
+const sanitizeUrl = (url: string): string => {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.host}${u.pathname}`;
+  } catch {
+    return url.split("?")[0] ?? url;
+  }
 };

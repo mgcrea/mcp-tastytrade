@@ -1,8 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import type { TastytradeHttpClient } from "../client/http.js";
+import type { Config } from "../config.js";
+import type { DiagnosticsRecorder } from "../lib/diagnostics.js";
 import type { DxlinkSession } from "../streaming/dxlink-session.js";
 import { registerAccountTools } from "./accounts.js";
+import { registerDiagnosticsTool } from "./diagnostics.js";
 import { registerInstrumentTools } from "./instruments.js";
 import { registerOrderReadTools, registerOrderWriteTools } from "./orders.js";
 import { registerQuoteTools } from "./quotes.js";
@@ -12,6 +15,9 @@ import { registerWatchlistReadTools, registerWatchlistWriteTools } from "./watch
 export type ToolContext = {
   http: TastytradeHttpClient;
   session: DxlinkSession;
+  recorder: DiagnosticsRecorder;
+  config: Config;
+  serverVersion: string;
   allowTrading: boolean;
   dangerouslyAllowTrading?: boolean;
 };
@@ -23,6 +29,7 @@ export const registerTools = (server: McpServer, ctx: ToolContext): void => {
   registerOrderReadTools(server, ctx.http);
   registerWatchlistReadTools(server, ctx.http);
   registerQuoteTools(server, ctx.session);
+  registerDiagnosticsTool(server, ctx);
 
   if (ctx.allowTrading) {
     const skipConfirm = ctx.dangerouslyAllowTrading ?? false;

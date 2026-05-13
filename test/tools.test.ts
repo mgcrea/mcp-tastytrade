@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { describe, expect, it, vi } from "vitest";
 
 import { TastytradeHttpClient } from "../src/client/http.js";
+import { BASE_URLS } from "../src/config.js";
+import { DiagnosticsRecorder } from "../src/lib/diagnostics.js";
 import { DxlinkSession } from "../src/streaming/dxlink-session.js";
 import { registerTools } from "../src/tools/index.js";
 
@@ -44,7 +46,24 @@ const captureTools = (
     }),
     getToken: async () => ({ token: "t", dxlinkUrl: "wss://dxlink.example/" }),
   });
-  registerTools(server, { http, session, allowTrading, dangerouslyAllowTrading });
+  registerTools(server, {
+    http,
+    session,
+    recorder: new DiagnosticsRecorder(),
+    serverVersion: "0.0.0",
+    config: {
+      clientSecret: "sec",
+      refreshToken: "ref",
+      scope: "read",
+      env: "prod",
+      baseUrl: BASE_URLS.prod,
+      allowTrading,
+      dangerouslyAllowTrading,
+      dxlinkIdleTimeoutMs: 30_000,
+    },
+    allowTrading,
+    dangerouslyAllowTrading,
+  });
   return { names: tools.map((t) => t.name), tools };
 };
 
@@ -66,6 +85,7 @@ describe("tool registration", () => {
     expect(names).toContain("get_chain_with_greeks");
     expect(names).toContain("find_strikes_by_delta");
     expect(names).toContain("get_earnings_calendar");
+    expect(names).toContain("get_diagnostics");
     // dry_run_order was folded into place_order(confirm:false)
     expect(names).not.toContain("dry_run_order");
     expect(names).not.toContain("place_order");

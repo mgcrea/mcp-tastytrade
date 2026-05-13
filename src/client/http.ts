@@ -53,7 +53,13 @@ export class TastytradeHttpClient {
     this.fetchImpl = opts.fetch ?? fetch;
     this.logger = opts.logger;
     this.userAgent = opts.userAgent ?? "mcp-tastytrade-js";
-    this.token = new AccessToken(this.baseUrl, opts.oauth, this.fetchImpl, this.userAgent);
+    this.token = new AccessToken(
+      this.baseUrl,
+      opts.oauth,
+      this.fetchImpl,
+      this.userAgent,
+      this.logger ?? {},
+    );
   }
 
   get accessToken(): AccessToken {
