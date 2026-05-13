@@ -128,8 +128,6 @@ const makeHarness = (
     idleTimeoutMs?: number;
     cacheTtlMs?: number;
     lingerMs?: number;
-    maxUnauthorizedAttempts?: number;
-    unauthorizedBackoffMs?: number;
   } = {},
 ): Harness => {
   const sockets: FakeWS[] = [];
@@ -145,8 +143,6 @@ const makeHarness = (
     cacheTtlMs: opts.cacheTtlMs ?? 1_000,
     lingerMs: opts.lingerMs ?? 50,
     defaultTimeoutMs: 1_000,
-    maxUnauthorizedAttempts: opts.maxUnauthorizedAttempts ?? 3,
-    unauthorizedBackoffMs: opts.unauthorizedBackoffMs ?? 10,
     wsFactory: factory as unknown as (url: string) => WSLike,
     getToken: async () => {
       getTokenCalls.count += 1;
@@ -302,36 +298,27 @@ describe("DxlinkSession", () => {
     await session.close();
   });
 
-  it("rejects after maxUnauthorizedAttempts and invalidates OAuth on each rejection", async () => {
-    const { session, sockets, invalidateOAuthCalls, getTokenCalls } = makeHarness({
-      maxUnauthorizedAttempts: 2,
-      unauthorizedBackoffMs: 5,
-    });
+  it("fails fast on UNAUTHORIZED without retrying (no rate-limit risk)", async () => {
+    const { session, sockets, invalidateOAuthCalls, getTokenCalls, factory } = makeHarness();
     const promise = session.snapshot(["AAPL"]);
 
-    // First connect → UNAUTHORIZED
     await flush();
     sockets[0]!.driveUnauthorized();
-    // Allow backoff timer + reconnect
-    await vi.advanceTimersByTimeAsync(20);
-    await flush();
-    // Second connect → UNAUTHORIZED again → exceeds cap → rejects
-    sockets[1]!.driveUnauthorized();
     await flush();
 
     await expect(promise).rejects.toThrow(/rejected authentication/);
-    expect(invalidateOAuthCalls.count).toBe(2);
-    expect(getTokenCalls.count).toBe(2);
+    // No retry: exactly one ws factory call and one token fetch.
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(getTokenCalls.count).toBe(1);
+    // OAuth still invalidated so the *next* user-initiated call gets a fresh access token.
+    expect(invalidateOAuthCalls.count).toBe(1);
     await session.close();
   });
 
-  it("resets reconnect/auth counters on a fresh snapshot call after a wedged cycle", async () => {
-    const { session, sockets, invalidateOAuthCalls } = makeHarness({
-      maxUnauthorizedAttempts: 1,
-      unauthorizedBackoffMs: 5,
-    });
+  it("starts a fresh cycle on the next snapshot after a wedged auth failure", async () => {
+    const { session, sockets, invalidateOAuthCalls } = makeHarness();
 
-    // Cycle 1 — wedge it with one UNAUTHORIZED (cap=1).
+    // Cycle 1 — auth fails fast.
     const failed = session.snapshot(["AAPL"]);
     await flush();
     sockets[0]!.driveUnauthorized();
@@ -339,8 +326,7 @@ describe("DxlinkSession", () => {
     await expect(failed).rejects.toThrow(/rejected authentication/);
     expect(invalidateOAuthCalls.count).toBe(1);
 
-    // Cycle 2 — same session, fresh attempt. Counters should be reset so it
-    // tries again from scratch and succeeds this time.
+    // Cycle 2 — same session, fresh attempt. Should re-open WS and succeed.
     const second = session.snapshot(["AAPL"]);
     await flush();
     expect(sockets.length).toBe(2);
