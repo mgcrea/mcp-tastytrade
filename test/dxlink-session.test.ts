@@ -36,11 +36,17 @@ class FakeWS implements WSLike {
   }
 
   // Simulate the full happy-path handshake driven from the server side.
+  // Per the DXLink protocol (confirmed by TT support), the server sends an
+  // *initial* AUTH_STATE: UNAUTHORIZED before processing AUTH — that's the
+  // pre-auth state, not a rejection. The session must ignore it; only the
+  // second AUTH_STATE message reflects the actual outcome.
   driveHandshake(): void {
     this.emit("open");
     // SETUP message we sent → server echoes SETUP back
     this.emit("message", JSON.stringify({ type: "SETUP", channel: 0 }));
-    // After we send AUTH, server replies AUTHORIZED
+    // Pre-auth AUTH_STATE (server's initial channel state — must be ignored).
+    this.emit("message", JSON.stringify({ type: "AUTH_STATE", channel: 0, state: "UNAUTHORIZED" }));
+    // Actual outcome after the server processes our AUTH message.
     this.emit("message", JSON.stringify({ type: "AUTH_STATE", channel: 0, state: "AUTHORIZED" }));
     // After CHANNEL_REQUEST, server replies CHANNEL_OPENED
     this.emit("message", JSON.stringify({ type: "CHANNEL_OPENED", channel: 3 }));
@@ -68,14 +74,16 @@ class FakeWS implements WSLike {
     );
   }
 
-  // Run SETUP then deliver an UNAUTHORIZED AUTH_STATE (server-side auth reject).
+  // Run SETUP then deliver a real auth rejection. The first AUTH_STATE is the
+  // pre-auth state (informational, ignored by the session); the second is the
+  // actual rejection after the server processes AUTH.
   driveUnauthorized(): void {
     this.emit("open");
     this.emit("message", JSON.stringify({ type: "SETUP", channel: 0 }));
-    this.emit(
-      "message",
-      JSON.stringify({ type: "AUTH_STATE", channel: 0, state: "UNAUTHORIZED" }),
-    );
+    // Pre-auth state — ignored.
+    this.emit("message", JSON.stringify({ type: "AUTH_STATE", channel: 0, state: "UNAUTHORIZED" }));
+    // Real rejection.
+    this.emit("message", JSON.stringify({ type: "AUTH_STATE", channel: 0, state: "UNAUTHORIZED" }));
   }
 
   // Emit a Quote record for `symbol` with bid/ask, in COMPACT format.
@@ -85,10 +93,7 @@ class FakeWS implements WSLike {
       JSON.stringify({
         type: "FEED_DATA",
         channel: 3,
-        data: [
-          "Quote",
-          ["Quote", symbol, bid, ask, 100, 100, Date.now()],
-        ],
+        data: ["Quote", ["Quote", symbol, bid, ask, 100, 100, Date.now()]],
       }),
     );
   }
@@ -245,9 +250,10 @@ describe("DxlinkSession", () => {
     ws.emitQuote("TSLA", 200, 201);
     await p2;
 
-    const subs = ws
-      .parsed()
-      .filter((m) => m.type === "FEED_SUBSCRIPTION") as { add?: unknown[]; reset?: boolean }[];
+    const subs = ws.parsed().filter((m) => m.type === "FEED_SUBSCRIPTION") as {
+      add?: unknown[];
+      reset?: boolean;
+    }[];
     expect(subs.length).toBeGreaterThan(0);
     // No reset: it's an incremental add.
     expect(subs.every((s) => s.reset !== true)).toBe(true);

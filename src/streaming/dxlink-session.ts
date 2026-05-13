@@ -7,7 +7,6 @@ import WebSocket from "ws";
 import { BUILD_INFO } from "../build-info.js";
 import { getApiQuoteToken } from "../client/endpoints/quote-tokens.js";
 import type { Logger, TastytradeHttpClient } from "../client/http.js";
-
 import {
   type EventType,
   type GreeksFields,
@@ -84,6 +83,7 @@ type Outgoing = Record<string, unknown> & { type: string; channel?: number };
 const subKey = (sym: string, t: EventType): string => `${sym}|${t}`;
 
 export class DxlinkSession {
+  readonly mode = "dxlink" as const;
   private state: ConnState = "idle";
   private ws: WSLike | null = null;
   private token: string | null = null;
@@ -105,6 +105,11 @@ export class DxlinkSession {
   private lastError: string | null = null;
   private lastDxlinkUrl: string | null = null;
   private lastAuthState: Record<string, unknown> | null = null;
+  // DXLink sends an initial AUTH_STATE:UNAUTHORIZED *before* we've sent AUTH —
+  // it's the pre-auth state of the channel, not an error. The official SDK
+  // tracks this with an isFirstAuthState flag; we mirror that. Reset on every
+  // (re)connect so each fresh session has its own pre-auth signal.
+  private isFirstAuthState = true;
   // When true, the next ws-close handler should not schedule a reconnect
   // (caller is permanently giving up for this attempt cycle).
   private gaveUpThisCycle = false;
@@ -188,7 +193,9 @@ export class DxlinkSession {
     for (const n of this.refcounts.values()) refcountTotal += n;
     return {
       state: this.state,
-      subscribedSymbols: [...new Set(Array.from(this.refcounts.keys()).map((k) => k.split("|")[0]!))],
+      subscribedSymbols: [
+        ...new Set(Array.from(this.refcounts.keys()).map((k) => k.split("|")[0]!)),
+      ],
       onWire: this.onWire.size,
       pendingRemoves: this.pendingRemoves.size,
       refcountTotal,
@@ -297,6 +304,7 @@ export class DxlinkSession {
   private async connect(): Promise<void> {
     if (this.state === "closed") return;
     this.state = "connecting";
+    this.isFirstAuthState = true;
     try {
       this.logger.debug?.("dxlink: fetching api-quote-token");
       const tok = await this.getToken();
@@ -366,7 +374,20 @@ export class DxlinkSession {
         this.logger.warn?.("dxlink: ERROR body:", body);
         break;
       }
-      case "AUTH_STATE":
+      case "AUTH_STATE": {
+        // DXLink sends an *initial* AUTH_STATE message right after SETUP to
+        // report the pre-auth state of the channel — almost always UNAUTHORIZED,
+        // because we haven't sent AUTH yet. This is normal and per protocol
+        // (confirmed by TT support and the @dxfeed/dxlink-api SDK, which
+        // tracks an `isFirstAuthState` flag for exactly this reason). Treat
+        // the very first AUTH_STATE as informational and don't react.
+        if (this.isFirstAuthState) {
+          this.isFirstAuthState = false;
+          this.logger.debug?.(
+            `dxlink: initial AUTH_STATE=${String(msg.state)} (pre-auth, ignored)`,
+          );
+          break;
+        }
         if (msg.state === "AUTHORIZED") {
           this.lastAuthState = null;
           this.startKeepalive();
@@ -377,10 +398,9 @@ export class DxlinkSession {
             parameters: { contract: "AUTO" },
           });
         } else if (msg.state === "UNAUTHORIZED") {
-          // Fail fast — TT's auth rejection is deterministic, not a transient blip.
-          // Retrying in a tight loop just wastes round trips and risks rate
-          // limiting. The next user-initiated snapshot() starts a fresh cycle,
-          // and invalidating OAuth now ensures it picks up a fresh access token.
+          // Post-AUTH UNAUTHORIZED — this is a real rejection. Fail fast;
+          // the next user-initiated snapshot() starts a fresh cycle, and
+          // invalidating OAuth ensures it picks up a fresh access token.
           this.lastAuthState = msg;
           this.lastError = `DXLink UNAUTHORIZED ${JSON.stringify(msg)}`;
           this.logger.warn?.("dxlink: AUTH_STATE body:", JSON.stringify(msg));
@@ -400,6 +420,7 @@ export class DxlinkSession {
           this.ws?.close();
         }
         break;
+      }
       case "CHANNEL_OPENED": {
         const acceptEventFields: Record<string, string[]> = {};
         for (const t of Object.keys(REQUESTED_FIELDS) as EventType[]) {
@@ -482,9 +503,7 @@ export class DxlinkSession {
   private scheduleReconnect(): void {
     if (this.state === "closed") return;
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      const err = new Error(
-        `DXLink reconnect exhausted (${this.maxReconnectAttempts} attempts)`,
-      );
+      const err = new Error(`DXLink reconnect exhausted (${this.maxReconnectAttempts} attempts)`);
       this.logger.error?.("dxlink: giving up", err.message);
       this.failReady(err);
       this.wakeAllWaiters();
