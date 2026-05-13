@@ -35,6 +35,7 @@ export const createServer = (opts: CreateServerOptions): CreatedServer => {
   });
   const session = new DxlinkSession(http, {
     idleTimeoutMs: opts.config.dxlinkIdleTimeoutMs,
+    invalidateOAuth: () => http.accessToken.invalidate(),
     ...(opts.logger ? { logger: opts.logger } : {}),
   });
   registerTools(server, {

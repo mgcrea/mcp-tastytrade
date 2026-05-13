@@ -38,6 +38,12 @@ export type DxlinkSessionOptions = {
   lingerMs?: number;
   defaultTimeoutMs?: number;
   maxReconnectAttempts?: number;
+  // UNAUTHORIZED isn't a transient blip — small cap, longer backoff.
+  maxUnauthorizedAttempts?: number;
+  unauthorizedBackoffMs?: number;
+  // Force a fresh OAuth grant on UNAUTHORIZED — the cached access token may
+  // have been revoked or rescoped server-side. Wired from createServer.
+  invalidateOAuth?: () => void;
   logger?: Logger;
   wsFactory?: WSFactory;
   getToken?: () => Promise<{ token: string; dxlinkUrl: string }>;
@@ -75,12 +81,19 @@ export class DxlinkSession {
   private idleTimer: NodeJS.Timeout | null = null;
   private keepaliveTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
+  private unauthorizedAttempts = 0;
+  // When true, the next ws-close handler should not schedule a reconnect
+  // (caller is permanently giving up for this attempt cycle).
+  private gaveUpThisCycle = false;
 
   private readonly idleTimeoutMs: number;
   private readonly cacheTtlMs: number;
   private readonly lingerMs: number;
   private readonly defaultTimeoutMs: number;
   private readonly maxReconnectAttempts: number;
+  private readonly maxUnauthorizedAttempts: number;
+  private readonly unauthorizedBackoffMs: number;
+  private readonly invalidateOAuth: () => void;
   private readonly wsFactory: WSFactory;
   private readonly getToken: () => Promise<{ token: string; dxlinkUrl: string }>;
   private readonly now: () => number;
@@ -92,6 +105,9 @@ export class DxlinkSession {
     this.lingerMs = opts.lingerMs ?? 500;
     this.defaultTimeoutMs = opts.defaultTimeoutMs ?? 5_000;
     this.maxReconnectAttempts = opts.maxReconnectAttempts ?? 10;
+    this.maxUnauthorizedAttempts = opts.maxUnauthorizedAttempts ?? 3;
+    this.unauthorizedBackoffMs = opts.unauthorizedBackoffMs ?? 2_000;
+    this.invalidateOAuth = opts.invalidateOAuth ?? (() => undefined);
     this.wsFactory = opts.wsFactory ?? ((url) => new WebSocket(url) as unknown as WSLike);
     this.getToken = opts.getToken ?? (() => getApiQuoteToken(http));
     this.now = opts.now ?? (() => Date.now());
@@ -224,6 +240,11 @@ export class DxlinkSession {
     if (this.state === "ready") return;
     if (this.state === "closed") throw new Error("DxlinkSession is closed");
     if (this.readyPromise) return this.readyPromise;
+    // A fresh request begins a fresh attempt cycle. Reset both counters so a
+    // previous wedged cycle doesn't permanently disable the session.
+    this.reconnectAttempts = 0;
+    this.unauthorizedAttempts = 0;
+    this.gaveUpThisCycle = false;
     this.readyPromise = new Promise<void>((resolve, reject) => {
       this.resolveReady = resolve;
       this.rejectReady = reject;
@@ -281,6 +302,7 @@ export class DxlinkSession {
         break;
       case "AUTH_STATE":
         if (msg.state === "AUTHORIZED") {
+          this.unauthorizedAttempts = 0;
           this.startKeepalive();
           this.send({
             type: "CHANNEL_REQUEST",
@@ -289,8 +311,29 @@ export class DxlinkSession {
             parameters: { contract: "AUTO" },
           });
         } else if (msg.state === "UNAUTHORIZED") {
-          this.logger.warn?.("dxlink: UNAUTHORIZED — will reconnect with fresh token");
+          this.unauthorizedAttempts += 1;
           this.token = null;
+          // Force fresh OAuth on the next api-quote-tokens fetch — the cached
+          // access token may have been revoked or rescoped.
+          try {
+            this.invalidateOAuth();
+          } catch {
+            /* never throw from message handler */
+          }
+          if (this.unauthorizedAttempts >= this.maxUnauthorizedAttempts) {
+            const err = new Error(
+              `DXLink rejected authentication after ${this.maxUnauthorizedAttempts} attempts — check OAuth scope, refresh token, and that no other client is using this grant.`,
+            );
+            this.logger.error?.("dxlink: giving up auth:", err.message);
+            this.gaveUpThisCycle = true;
+            this.failReady(err);
+            this.wakeAllWaiters();
+            this.ws?.close();
+            return;
+          }
+          this.logger.warn?.(
+            `dxlink: UNAUTHORIZED (attempt ${this.unauthorizedAttempts}/${this.maxUnauthorizedAttempts}) — will refresh OAuth and retry`,
+          );
           this.ws?.close();
         }
         break;
@@ -362,6 +405,11 @@ export class DxlinkSession {
     if (this.state === "closed") return;
     const hasWork = this.refcounts.size > 0 || this.waiters.size > 0;
     this.state = "idle";
+    if (this.gaveUpThisCycle) {
+      // The auth handler has already failed the ready promise and woken waiters.
+      // Don't reconnect — leave state as idle so the next snapshot() can start fresh.
+      return;
+    }
     if (hasWork) this.scheduleReconnect();
   }
 
@@ -376,7 +424,12 @@ export class DxlinkSession {
       this.wakeAllWaiters();
       return;
     }
-    const delay = Math.min(250 * 2 ** this.reconnectAttempts, 5000);
+    // After UNAUTHORIZED, back off longer — auth failures aren't network blips
+    // and TT may need time to release a prior session slot.
+    const delay =
+      this.unauthorizedAttempts > 0
+        ? Math.min(this.unauthorizedBackoffMs * this.unauthorizedAttempts, 5000)
+        : Math.min(250 * 2 ** this.reconnectAttempts, 5000);
     this.reconnectAttempts += 1;
     this.state = "reconnecting";
     setTimeout(() => {
