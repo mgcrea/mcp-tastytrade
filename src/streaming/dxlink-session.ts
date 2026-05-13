@@ -327,13 +327,21 @@ export class DxlinkSession {
   }
 
   private handleOpen(): void {
+    // Match the official @dxfeed/dxlink-websocket-client wire format exactly:
+    //   - `version` = "<protocolVersion>-<clientName>/<clientVersion>"
+    //   - send SETUP and AUTH back-to-back without waiting for the server's
+    //     SETUP echo (the server may not echo it, and gating AUTH on an echo
+    //     leaves a race that TT has begun rejecting as UNAUTHORIZED).
     this.send({
       type: "SETUP",
       channel: 0,
-      version: "0.1-mcp-tastytrade",
+      version: "0.1-mcp-tastytrade-js/0.7.1",
       keepaliveTimeout: 60,
       acceptKeepaliveTimeout: 60,
     });
+    if (this.token) {
+      this.send({ type: "AUTH", channel: 0, token: this.token });
+    }
   }
 
   private handleRawMessage(raw: unknown): void {
@@ -350,8 +358,19 @@ export class DxlinkSession {
     const type = msg.type as string | undefined;
     switch (type) {
       case "SETUP":
-        if (this.token) this.send({ type: "AUTH", channel: 0, token: this.token });
+        // Server-side echo. We already sent AUTH on transport-open;
+        // no further action needed here.
         break;
+      case "ERROR": {
+        // Top-level errors carry the reason we've been missing — e.g.
+        // { error: "UNAUTHORIZED", message: "Token expired" }. Capture
+        // the full body for diagnostics so the agent can see the cause.
+        const body = JSON.stringify(msg);
+        this.lastError = `DXLink ERROR ${body}`;
+        this.lastAuthState = msg;
+        this.logger.warn?.("dxlink: ERROR body:", body);
+        break;
+      }
       case "AUTH_STATE":
         if (msg.state === "AUTHORIZED") {
           this.unauthorizedAttempts = 0;
@@ -433,6 +452,7 @@ export class DxlinkSession {
         this.send({ type: "KEEPALIVE", channel: 0 });
         break;
       default:
+        this.logger.debug?.("dxlink: unhandled message", JSON.stringify(msg));
         break;
     }
   }
