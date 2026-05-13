@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { enrichLeg } from "../src/lib/chain-greeks.js";
+import type { EnrichedLeg } from "../src/lib/chain-greeks.js";
 import type { ChainLeg } from "../src/lib/option-chain.js";
 import type { MarketSnapshot } from "../src/streaming/dxlink-snapshot.js";
 import { extractEarnings, pickStrikeByDelta } from "../src/tools/instruments.js";
-import type { EnrichedLeg } from "../src/lib/chain-greeks.js";
 
 const leg = (overrides: Partial<ChainLeg> = {}): ChainLeg => ({
   expirationDate: "2026-05-29",
@@ -16,12 +16,7 @@ const leg = (overrides: Partial<ChainLeg> = {}): ChainLeg => ({
   ...overrides,
 });
 
-const snap = (
-  dxSym: string,
-  bid: number,
-  ask: number,
-  delta: number | null,
-): MarketSnapshot => ({
+const snap = (dxSym: string, bid: number, ask: number, delta: number | null): MarketSnapshot => ({
   symbol: dxSym,
   dxlinkSymbol: dxSym,
   receivedAt: 0,
@@ -59,12 +54,78 @@ describe("enrichLeg", () => {
 
 describe("pickStrikeByDelta", () => {
   const legs: EnrichedLeg[] = [
-    { ...leg({ strikePrice: 95, optionType: "Call" }), bid: 6, ask: 6.2, mid: 6.1, delta: 0.65, gamma: null, theta: null, vega: null, rho: null, iv: null },
-    { ...leg({ strikePrice: 100, optionType: "Call" }), bid: 3, ask: 3.2, mid: 3.1, delta: 0.50, gamma: null, theta: null, vega: null, rho: null, iv: null },
-    { ...leg({ strikePrice: 105, optionType: "Call" }), bid: 1, ask: 1.2, mid: 1.1, delta: 0.30, gamma: null, theta: null, vega: null, rho: null, iv: null },
-    { ...leg({ strikePrice: 95, optionType: "Put" }), bid: 1, ask: 1.2, mid: 1.1, delta: -0.30, gamma: null, theta: null, vega: null, rho: null, iv: null },
-    { ...leg({ strikePrice: 100, optionType: "Put" }), bid: 3, ask: 3.2, mid: 3.1, delta: -0.50, gamma: null, theta: null, vega: null, rho: null, iv: null },
-    { ...leg({ strikePrice: 105, optionType: "Put" }), bid: 6, ask: 6.2, mid: 6.1, delta: -0.65, gamma: null, theta: null, vega: null, rho: null, iv: null },
+    {
+      ...leg({ strikePrice: 95, optionType: "Call" }),
+      bid: 6,
+      ask: 6.2,
+      mid: 6.1,
+      delta: 0.65,
+      gamma: null,
+      theta: null,
+      vega: null,
+      rho: null,
+      iv: null,
+    },
+    {
+      ...leg({ strikePrice: 100, optionType: "Call" }),
+      bid: 3,
+      ask: 3.2,
+      mid: 3.1,
+      delta: 0.5,
+      gamma: null,
+      theta: null,
+      vega: null,
+      rho: null,
+      iv: null,
+    },
+    {
+      ...leg({ strikePrice: 105, optionType: "Call" }),
+      bid: 1,
+      ask: 1.2,
+      mid: 1.1,
+      delta: 0.3,
+      gamma: null,
+      theta: null,
+      vega: null,
+      rho: null,
+      iv: null,
+    },
+    {
+      ...leg({ strikePrice: 95, optionType: "Put" }),
+      bid: 1,
+      ask: 1.2,
+      mid: 1.1,
+      delta: -0.3,
+      gamma: null,
+      theta: null,
+      vega: null,
+      rho: null,
+      iv: null,
+    },
+    {
+      ...leg({ strikePrice: 100, optionType: "Put" }),
+      bid: 3,
+      ask: 3.2,
+      mid: 3.1,
+      delta: -0.5,
+      gamma: null,
+      theta: null,
+      vega: null,
+      rho: null,
+      iv: null,
+    },
+    {
+      ...leg({ strikePrice: 105, optionType: "Put" }),
+      bid: 6,
+      ask: 6.2,
+      mid: 6.1,
+      delta: -0.65,
+      gamma: null,
+      theta: null,
+      vega: null,
+      rho: null,
+      iv: null,
+    },
   ];
 
   it("picks the call closest to a positive target delta", () => {

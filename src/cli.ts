@@ -18,7 +18,7 @@ const main = async (): Promise<void> => {
     `${BUILD_INFO.name}@${BUILD_INFO.version} (git ${BUILD_INFO.gitCommit} ${BUILD_INFO.gitCommitDate}, node ${process.version})`,
   );
   const config = loadConfig();
-  const { server, session } = createServer({ config, logger: stderrLogger });
+  const { server, provider } = createServer({ config, logger: stderrLogger });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   const tradingMode = config.dangerouslyAllowTrading
@@ -35,7 +35,7 @@ const main = async (): Promise<void> => {
 
   const shutdown = async (signal: string): Promise<void> => {
     stderrLogger.warn(`received ${signal}, closing session`);
-    await session.close();
+    await provider.close?.();
     process.exit(0);
   };
   process.on("SIGINT", () => void shutdown("SIGINT"));

@@ -1,16 +1,10 @@
-// Snapshot wrappers around the long-lived DxlinkSession.
-// The session owns the connection lifecycle; these helpers exist for tool ergonomics
-// and to preserve the import surface used elsewhere in the codebase.
+// Snapshot wrappers around a MarketDataProvider (DXLink streaming or REST).
+// The provider owns the connection lifecycle; these helpers exist for tool ergonomics.
 
-import type { DxlinkSession } from "./dxlink-session.js";
 import type { EventType, MarketSnapshot } from "./dxlink-types.js";
+import type { MarketDataProvider } from "./market-data-provider.js";
 
-export type {
-  EventType,
-  GreeksFields,
-  MarketSnapshot,
-  QuoteFields,
-} from "./dxlink-types.js";
+export type { EventType, GreeksFields, MarketSnapshot, QuoteFields } from "./dxlink-types.js";
 export { REQUESTED_FIELDS, defaultTypesForSymbol } from "./dxlink-types.js";
 
 export type SnapshotOptions = {
@@ -19,17 +13,17 @@ export type SnapshotOptions = {
 };
 
 export const getMarketSnapshot = async (
-  session: DxlinkSession,
+  provider: MarketDataProvider,
   symbol: string,
   opts: SnapshotOptions = {},
 ): Promise<MarketSnapshot> => {
-  const [result] = await session.snapshot([symbol], opts.types, opts.timeoutMs);
+  const [result] = await provider.snapshot([symbol], opts.types, opts.timeoutMs);
   if (!result) throw new Error(`No snapshot returned for ${symbol}`);
   return result;
 };
 
 export const getMarketSnapshots = (
-  session: DxlinkSession,
+  provider: MarketDataProvider,
   symbols: string[],
   opts: SnapshotOptions = {},
-): Promise<MarketSnapshot[]> => session.snapshot(symbols, opts.types, opts.timeoutMs);
+): Promise<MarketSnapshot[]> => provider.snapshot(symbols, opts.types, opts.timeoutMs);

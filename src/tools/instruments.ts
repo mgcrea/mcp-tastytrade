@@ -23,14 +23,14 @@ import {
   sliceChain,
   summarizeChain,
 } from "../lib/option-chain.js";
-import type { DxlinkSession } from "../streaming/dxlink-session.js";
 import { getMarketSnapshots } from "../streaming/dxlink-snapshot.js";
+import type { MarketDataProvider } from "../streaming/market-data-provider.js";
 import { wrap } from "./util.js";
 
 export const registerInstrumentTools = (
   server: McpServer,
   http: TastytradeHttpClient,
-  session: DxlinkSession,
+  provider: MarketDataProvider,
 ): void => {
   server.tool(
     "search_symbols",
@@ -109,6 +109,11 @@ export const registerInstrumentTools = (
         if (!expirationDate && daysToExpiration === undefined) {
           throw new Error("Provide either expirationDate or daysToExpiration");
         }
+        if (provider.mode === "rest") {
+          throw new Error(
+            "get_expected_move requires DXLink streaming (Greeks/IV are not available via REST). Unset TASTYTRADE_DISABLE_DXLINK to use this tool.",
+          );
+        }
         const raw = await getOptionChainNested(http, underlyingSymbol);
         const root = (raw.items?.[0] ?? raw) as RawChainRoot;
         const expiration = pickExpiration(root, {
@@ -116,7 +121,7 @@ export const registerInstrumentTools = (
           ...(daysToExpiration !== undefined ? { daysToExpiration } : {}),
         });
 
-        const [underlyingSnap] = await getMarketSnapshots(session, [underlyingSymbol], {
+        const [underlyingSnap] = await getMarketSnapshots(provider, [underlyingSymbol], {
           types: ["Quote"],
         });
         const bid = underlyingSnap?.quote?.bidPrice ?? null;
@@ -128,13 +133,11 @@ export const registerInstrumentTools = (
 
         const atmStrike = pickAtmStrike(expiration, spot);
         const optionSnaps = await getMarketSnapshots(
-          session,
+          provider,
           [atmStrike.callStreamerSymbol, atmStrike.putStreamerSymbol],
           { types: ["Quote", "Greeks"] },
         );
-        const callSnap = optionSnaps.find(
-          (s) => s.dxlinkSymbol === atmStrike.callStreamerSymbol,
-        );
+        const callSnap = optionSnaps.find((s) => s.dxlinkSymbol === atmStrike.callStreamerSymbol);
         const putSnap = optionSnaps.find((s) => s.dxlinkSymbol === atmStrike.putStreamerSymbol);
 
         return computeExpectedMove(
@@ -170,7 +173,7 @@ export const registerInstrumentTools = (
         if (!expirationDate && daysToExpiration === undefined) {
           throw new Error("Provide either expirationDate or daysToExpiration");
         }
-        return fetchEnrichedChain(http, session, underlyingSymbol, {
+        return fetchEnrichedChain(http, provider, underlyingSymbol, {
           ...(expirationDate ? { expirationDate } : {}),
           ...(daysToExpiration !== undefined ? { daysToExpiration } : {}),
           ...rest,
@@ -201,13 +204,19 @@ export const registerInstrumentTools = (
         if (!expirationDate && daysToExpiration === undefined) {
           throw new Error("Provide either expirationDate or daysToExpiration");
         }
-        const chain = await fetchEnrichedChain(http, session, underlyingSymbol, {
+        const chain = await fetchEnrichedChain(http, provider, underlyingSymbol, {
           ...(expirationDate ? { expirationDate } : {}),
           ...(daysToExpiration !== undefined ? { daysToExpiration } : {}),
           strikeWindow: strikeWindow ?? 25,
           ...(timeoutMs ? { timeoutMs } : {}),
         });
         const matches = deltas.map((target) => pickStrikeByDelta(chain.legs, target));
+        // In REST mode Greeks are null, so every match would have `leg: null` —
+        // surface a clear reason rather than silently returning empties.
+        const unavailableReason =
+          provider.mode === "rest"
+            ? "REST mode does not provide Greeks; unset TASTYTRADE_DISABLE_DXLINK for delta-based strike selection"
+            : null;
         return {
           underlyingSymbol: chain.underlyingSymbol,
           expirationDate: chain.expirationDate,
@@ -215,6 +224,7 @@ export const registerInstrumentTools = (
           underlyingPrice: chain.underlyingPrice,
           atmStrike: chain.atmStrike,
           matches,
+          ...(unavailableReason ? { unavailableReason } : {}),
         };
       }),
   );
@@ -286,8 +296,7 @@ type StrikeMatch = {
 export const pickStrikeByDelta = (legs: EnrichedLeg[], target: number): StrikeMatch => {
   const wantType: "Call" | "Put" = target >= 0 ? "Call" : "Put";
   const candidates = legs.filter(
-    (l): l is EnrichedLeg & { delta: number } =>
-      l.optionType === wantType && l.delta !== null,
+    (l): l is EnrichedLeg & { delta: number } => l.optionType === wantType && l.delta !== null,
   );
   if (candidates.length === 0) return { targetDelta: target, deltaDiff: null, leg: null };
   const best = candidates.toSorted(

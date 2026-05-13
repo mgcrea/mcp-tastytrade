@@ -8,6 +8,7 @@ Model Context Protocol server for the [TastyTrade](https://tastytrade.com) broke
 - **Native `fetch`** HTTP client. No axios, no `@tastytrade/api` dependency.
 - **TastyTrade dash-case ↔ camelCase** transparent translation.
 - **DXLink quote snapshots** over a long-lived WebSocket — `get_quote(symbol)` reuses the connection across calls and caches last-known values, so repeat queries return in <50ms instead of paying ~3–5s of auth/setup. The connection idles closed after `TASTYTRADE_DXLINK_IDLE_TIMEOUT_MS` (default 30 s) of inactivity and reconnects on the next call.
+- **REST fallback mode** — set `TASTYTRADE_DISABLE_DXLINK=1` to skip the WebSocket entirely and route `get_quote`, `get_quotes`, `get_chain_with_greeks`, and `get_position_greeks` through the Tastytrade REST `/market-data/by-type` endpoint. Greeks (`delta`/`gamma`/… fields) are unavailable via REST and always `null` in this mode. `get_expected_move` throws a clear error. Useful when DXLink auth is broken or you need a stateless deployment.
 - **Trading is opt-in.** Mutating tools (`place_order`, `cancel_order`, `replace_order`, `create_watchlist`, `update_watchlist`, `delete_watchlist`) are only registered when `TASTYTRADE_ALLOW_TRADING=1`. Order-placement tools additionally require `confirm: true` in the call args; otherwise they return a dry-run preview. Set `TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1` to flip the `confirm` default to `true` (auto-submit) — only use if you trust whatever's driving the MCP.
 
 ## Stack
@@ -38,6 +39,7 @@ TASTYTRADE_ENV=prod        # or "cert" for the sandbox
 TASTYTRADE_ALLOW_TRADING=             # "1" to register mutating tools (still gated by per-call confirm:true)
 TASTYTRADE_DANGEROUSLY_ALLOW_TRADING= # "1" to also flip the per-call confirm default to true (auto-submit)
 TASTYTRADE_DXLINK_IDLE_TIMEOUT_MS=    # how long to keep the DXLink WS open after the last quote call (default 30000)
+TASTYTRADE_DISABLE_DXLINK=            # "1" to skip DXLink and use REST /market-data/by-type (no Greeks)
 ```
 
 ## Run
@@ -180,11 +182,11 @@ pnpm docker:push                # pushes both :latest and :<package.json version
 | `get_chain_with_greeks`                                                              | Chain slice (default ATM±20 strikes) enriched with quote (bid/ask/mid) + Greeks per leg, in one batched call.                                |
 | `find_strikes_by_delta`                                                              | For each target delta, return the strike in the chain whose actual delta is closest. Positive→calls, negative→puts. Iron-condor wing picker. |
 | `get_earnings_calendar`                                                              | Bundled `{symbol, expectedReportDate, timeOfDay, estimatedEarnings}` for a batch of symbols, optional date filter.                           |
-| `get_diagnostics`                                                                    | Inspect server state + last ~200 log lines (DXLink session, OAuth freshness, recent warns/errors). Use to self-debug when a tool fails.      |
+| `get_diagnostics`                                                                    | Inspect server state + last ~200 log lines (market-data provider mode/state, OAuth freshness, recent warns/errors). Use to self-debug.       |
 | `get_dividend_history`, `get_earnings_history`                                       | Corporate event history.                                                                                                                     |
 | `list_watchlists`, `get_watchlist`, `list_public_watchlists`, `get_public_watchlist` | Watchlists.                                                                                                                                  |
-| `get_quote`                                                                          | Snapshot for one symbol via DXLink. Quote (bid/ask/sizes) plus Greeks (delta/gamma/theta/vega/IV) for options. Accepts OCC or DXLink format. |
-| `get_quotes`                                                                         | Batch snapshot for many symbols in a single DXLink connection.                                                                               |
+| `get_quote`                                                                          | Snapshot for one symbol. Quote (bid/ask/sizes) + Greeks for options (DXLink mode); bid/ask only in REST mode. Accepts OCC or DXLink format.  |
+| `get_quotes`                                                                         | Batch snapshot for many symbols. Greeks included in DXLink mode, null in REST mode.                                                          |
 
 ### Mutating (only when `TASTYTRADE_ALLOW_TRADING=1`)
 

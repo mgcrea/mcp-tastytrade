@@ -3,7 +3,6 @@
 // for comparison — the two should be in the same ballpark for liquid names.
 
 import type { MarketSnapshot } from "../streaming/dxlink-snapshot.js";
-
 import type { RawChainExpiration, RawChainRoot, RawChainStrike } from "./option-chain.js";
 
 export type LegQuote = {
@@ -98,14 +97,12 @@ export const computeExpectedMove = (
 ): ExpectedMove => {
   const atmCall = buildLegQuote(atmStrike.call, atmStrike.callStreamerSymbol, callSnapshot);
   const atmPut = buildLegQuote(atmStrike.put, atmStrike.putStreamerSymbol, putSnapshot);
-  const straddleMid =
-    atmCall.mid !== null && atmPut.mid !== null ? atmCall.mid + atmPut.mid : null;
+  const straddleMid = atmCall.mid !== null && atmPut.mid !== null ? atmCall.mid + atmPut.mid : null;
 
   const ivs = [atmCall.iv, atmPut.iv].filter((v): v is number => v !== null);
   const iv = ivs.length > 0 ? ivs.reduce((a, b) => a + b, 0) / ivs.length : null;
   const dte = expiration.daysToExpiration;
-  const ivImpliedMove =
-    iv !== null && dte > 0 ? underlyingPrice * iv * Math.sqrt(dte / 365) : null;
+  const ivImpliedMove = iv !== null && dte > 0 ? underlyingPrice * iv * Math.sqrt(dte / 365) : null;
 
   return {
     underlyingSymbol,

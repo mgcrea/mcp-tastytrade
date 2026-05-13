@@ -3,9 +3,8 @@
 
 import { getOptionChainNested } from "../client/endpoints/instruments.js";
 import type { TastytradeHttpClient } from "../client/http.js";
-import type { DxlinkSession } from "../streaming/dxlink-session.js";
 import type { MarketSnapshot } from "../streaming/dxlink-snapshot.js";
-
+import type { MarketDataProvider } from "../streaming/market-data-provider.js";
 import { pickAtmStrike, pickExpiration } from "./expected-move.js";
 import {
   type ChainLeg,
@@ -78,14 +77,16 @@ const strikesAroundSpot = (
     return all.slice(Math.max(0, mid - count), Math.min(all.length, mid + count));
   }
   return all
-    .toSorted((a, b) => Math.abs(Number(a.strikePrice) - spot) - Math.abs(Number(b.strikePrice) - spot))
+    .toSorted(
+      (a, b) => Math.abs(Number(a.strikePrice) - spot) - Math.abs(Number(b.strikePrice) - spot),
+    )
     .slice(0, count * 2)
     .toSorted((a, b) => Number(a.strikePrice) - Number(b.strikePrice));
 };
 
 export const fetchEnrichedChain = async (
   http: TastytradeHttpClient,
-  session: DxlinkSession,
+  provider: MarketDataProvider,
   underlyingSymbol: string,
   opts: ChainGreeksOptions,
 ): Promise<EnrichedChain> => {
@@ -100,7 +101,7 @@ export const fetchEnrichedChain = async (
   // Spot quote for ATM centering
   let spot: number | null = null;
   try {
-    const [u] = await session.snapshot([underlyingSymbol], ["Quote"], opts.timeoutMs);
+    const [u] = await provider.snapshot([underlyingSymbol], ["Quote"], opts.timeoutMs);
     const bid = u?.quote?.bidPrice ?? null;
     const ask = u?.quote?.askPrice ?? null;
     spot = bid !== null && ask !== null ? (bid + ask) / 2 : null;
@@ -132,7 +133,7 @@ export const fetchEnrichedChain = async (
   }
 
   const streamerSymbols = slice.legs.map((l) => l.streamerSymbol);
-  const snaps = await session.snapshot(streamerSymbols, ["Quote", "Greeks"], opts.timeoutMs);
+  const snaps = await provider.snapshot(streamerSymbols, ["Quote", "Greeks"], opts.timeoutMs);
   const snapMap = new Map(snaps.map((s) => [s.dxlinkSymbol, s] as const));
 
   return {

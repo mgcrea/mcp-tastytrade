@@ -48,7 +48,7 @@ const captureTools = (
   });
   registerTools(server, {
     http,
-    session,
+    provider: session,
     recorder: new DiagnosticsRecorder(),
     serverVersion: "0.0.0",
     config: {
@@ -61,6 +61,7 @@ const captureTools = (
       dangerouslyAllowTrading,
       dxlinkIdleTimeoutMs: 30_000,
       dxlinkVersion: "0.1-test/0.0.0",
+      disableDxlink: false,
     },
     allowTrading,
     dangerouslyAllowTrading,

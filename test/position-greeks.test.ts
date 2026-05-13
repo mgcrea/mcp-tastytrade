@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  enrichPositions,
-  parseOccDetails,
-  type RawPosition,
-} from "../src/lib/position-greeks.js";
+import { enrichPositions, parseOccDetails, type RawPosition } from "../src/lib/position-greeks.js";
 import type { MarketSnapshot } from "../src/streaming/dxlink-snapshot.js";
 
 const optionSnap = (
@@ -87,7 +83,11 @@ describe("enrichPositions", () => {
 
     const snaps = [
       optionSnap(".AAPL261218C200", { bid: 5, ask: 5.2 }, { delta: 0.5, theta: -0.05, vega: 0.1 }),
-      optionSnap(".AAPL261218P180", { bid: 3, ask: 3.1 }, { delta: -0.4, theta: -0.03, vega: 0.08 }),
+      optionSnap(
+        ".AAPL261218P180",
+        { bid: 3, ask: 3.1 },
+        { delta: -0.4, theta: -0.03, vega: 0.08 },
+      ),
     ];
 
     const report = enrichPositions(positions, snaps, "5WX12345", fixedNow);

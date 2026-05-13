@@ -88,8 +88,7 @@ export const isActivePosition = (p: RawPosition): boolean => {
   return true;
 };
 
-export const isOptionPosition = (p: RawPosition): boolean =>
-  p.instrumentType === "Equity Option";
+export const isOptionPosition = (p: RawPosition): boolean => p.instrumentType === "Equity Option";
 
 const dirSign = (d: string | undefined): number => (d === "Short" ? -1 : 1);
 

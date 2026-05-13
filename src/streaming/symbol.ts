@@ -4,6 +4,7 @@
 // The TT API uses OCC; the streaming feed uses DXLink.
 
 const OCC_RE = /^([A-Z][A-Z0-9.$/]{0,5})\s+(\d{6})([CP])(\d{8})$/;
+const DXLINK_OPTION_RE = /^\.([A-Z][A-Z0-9.$/]{0,5})(\d{6})([CP])(\d+(?:\.\d+)?)$/;
 
 export const isDxlinkOption = (sym: string): boolean => sym.startsWith(".");
 
@@ -29,5 +30,22 @@ export const occToDxlink = (occ: string): string => {
 
 export const toDxlink = (sym: string): string => {
   if (isOccOption(sym)) return occToDxlink(sym);
+  return sym;
+};
+
+export const dxlinkToOcc = (dxlink: string): string => {
+  const match = DXLINK_OPTION_RE.exec(dxlink);
+  if (!match) {
+    throw new Error(`Not a DXLink option symbol: "${dxlink}"`);
+  }
+  const [, root, yymmdd, cp, strikeRaw] = match;
+  const strike1000 = Math.round(Number(strikeRaw) * 1000);
+  const strikePadded = String(strike1000).padStart(8, "0");
+  const rootPadded = root!.padEnd(6, " ");
+  return `${rootPadded}${yymmdd}${cp}${strikePadded}`;
+};
+
+export const toOcc = (sym: string): string => {
+  if (isDxlinkOption(sym)) return dxlinkToOcc(sym);
   return sym;
 };

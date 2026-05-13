@@ -11,13 +11,13 @@ import {
   isOptionPosition,
   type RawPosition,
 } from "../lib/position-greeks.js";
-import type { DxlinkSession } from "../streaming/dxlink-session.js";
+import type { MarketDataProvider } from "../streaming/market-data-provider.js";
 import { wrap } from "./util.js";
 
 export const registerAccountTools = (
   server: McpServer,
   http: TastytradeHttpClient,
-  session: DxlinkSession,
+  provider: MarketDataProvider,
 ): void => {
   server.tool(
     "list_accounts",
@@ -78,11 +78,7 @@ export const registerAccountTools = (
         const optionSymbols = positions.filter(isOptionPosition).map((p) => p.symbol);
         const snaps =
           optionSymbols.length > 0
-            ? await session.snapshot(
-                optionSymbols,
-                ["Quote", "Greeks"],
-                timeoutMs,
-              )
+            ? await provider.snapshot(optionSymbols, ["Quote", "Greeks"], timeoutMs)
             : [];
         return enrichPositions(positions, snaps, accountNumber);
       }),

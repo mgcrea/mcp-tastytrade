@@ -90,7 +90,9 @@ export class AccessToken {
     this.value = data.access_token;
     this.expiresAt = Date.now() + data.expires_in * 1000;
     this.refreshCount += 1;
-    this.logger.debug?.(`oauth: refreshed (expires_in=${data.expires_in}s, count=${this.refreshCount})`);
+    this.logger.debug?.(
+      `oauth: refreshed (expires_in=${data.expires_in}s, count=${this.refreshCount})`,
+    );
     return this.value;
   }
 }

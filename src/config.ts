@@ -27,6 +27,11 @@ const ConfigSchema = z.object({
   // (e.g. "0.1-DXF-JS/0.3.0") when probing for server-side client
   // fingerprinting.
   dxlinkVersion: z.string().min(1).default(DEFAULT_DXLINK_VERSION),
+  // Opt-in: skip DXLink entirely and serve quotes via REST `/market-data/by-type`.
+  // Loses Greeks (delta/gamma/theta/...), but keeps `get_quote`, `get_quotes`,
+  // `get_chain_with_greeks`, and `get_position_greeks` working when streaming
+  // is broken.
+  disableDxlink: z.boolean().default(false),
 });
 
 export type Config = z.infer<typeof ConfigSchema> & { baseUrl: string };
@@ -52,6 +57,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     dangerouslyAllowTrading,
     dxlinkIdleTimeoutMs: parseNumberOpt(env.TASTYTRADE_DXLINK_IDLE_TIMEOUT_MS),
     dxlinkVersion: env.TASTYTRADE_DXLINK_VERSION,
+    disableDxlink: isTruthy(env.TASTYTRADE_DISABLE_DXLINK),
   });
 
   return {

@@ -5,6 +5,8 @@ import { TastytradeHttpClient, type Logger } from "./client/http.js";
 import type { Config } from "./config.js";
 import { DiagnosticsRecorder } from "./lib/diagnostics.js";
 import { DxlinkSession } from "./streaming/dxlink-session.js";
+import type { MarketDataProvider } from "./streaming/market-data-provider.js";
+import { RestMarketDataProvider } from "./streaming/rest-market-data.js";
 import { registerTools } from "./tools/index.js";
 
 export const SERVER_NAME = BUILD_INFO.name;
@@ -19,7 +21,7 @@ export type CreateServerOptions = {
 
 export type CreatedServer = {
   server: McpServer;
-  session: DxlinkSession;
+  provider: MarketDataProvider;
   recorder: DiagnosticsRecorder;
 };
 
@@ -53,20 +55,22 @@ export const createServer = (opts: CreateServerOptions): CreatedServer => {
     logger,
     userAgent: USER_AGENT,
   });
-  const session = new DxlinkSession(http, {
-    idleTimeoutMs: opts.config.dxlinkIdleTimeoutMs,
-    dxlinkVersion: opts.config.dxlinkVersion,
-    invalidateOAuth: () => http.accessToken.invalidate(),
-    logger,
-  });
+  const provider: MarketDataProvider = opts.config.disableDxlink
+    ? new RestMarketDataProvider(http, { logger })
+    : new DxlinkSession(http, {
+        idleTimeoutMs: opts.config.dxlinkIdleTimeoutMs,
+        dxlinkVersion: opts.config.dxlinkVersion,
+        invalidateOAuth: () => http.accessToken.invalidate(),
+        logger,
+      });
   registerTools(server, {
     http,
-    session,
+    provider,
     recorder,
     config: opts.config,
     serverVersion: SERVER_VERSION,
     allowTrading: opts.config.allowTrading,
     dangerouslyAllowTrading: opts.config.dangerouslyAllowTrading,
   });
-  return { server, session, recorder };
+  return { server, provider, recorder };
 };
