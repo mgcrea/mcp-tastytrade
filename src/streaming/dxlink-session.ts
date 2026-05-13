@@ -4,6 +4,7 @@
 
 import WebSocket from "ws";
 
+import { BUILD_INFO } from "../build-info.js";
 import { getApiQuoteToken } from "../client/endpoints/quote-tokens.js";
 import type { Logger, TastytradeHttpClient } from "../client/http.js";
 
@@ -44,6 +45,9 @@ export type DxlinkSessionOptions = {
   // Force a fresh OAuth grant on UNAUTHORIZED — the cached access token may
   // have been revoked or rescoped server-side. Wired from createServer.
   invalidateOAuth?: () => void;
+  // SETUP.version field sent to DXLink. Configurable so users can mimic the
+  // official SDK (e.g. "0.1-DXF-JS/0.3.0") to probe for client fingerprinting.
+  dxlinkVersion?: string;
   logger?: Logger;
   wsFactory?: WSFactory;
   getToken?: () => Promise<{ token: string; dxlinkUrl: string }>;
@@ -118,6 +122,7 @@ export class DxlinkSession {
   private readonly maxUnauthorizedAttempts: number;
   private readonly unauthorizedBackoffMs: number;
   private readonly invalidateOAuth: () => void;
+  private readonly dxlinkVersion: string;
   private readonly wsFactory: WSFactory;
   private readonly getToken: () => Promise<{ token: string; dxlinkUrl: string }>;
   private readonly now: () => number;
@@ -132,6 +137,7 @@ export class DxlinkSession {
     this.maxUnauthorizedAttempts = opts.maxUnauthorizedAttempts ?? 3;
     this.unauthorizedBackoffMs = opts.unauthorizedBackoffMs ?? 2_000;
     this.invalidateOAuth = opts.invalidateOAuth ?? (() => undefined);
+    this.dxlinkVersion = opts.dxlinkVersion ?? `0.1-mcp-tastytrade-js/${BUILD_INFO.version}`;
     this.wsFactory = opts.wsFactory ?? ((url) => new WebSocket(url) as unknown as WSLike);
     this.getToken = opts.getToken ?? (() => getApiQuoteToken(http));
     this.now = opts.now ?? (() => Date.now());
@@ -335,7 +341,7 @@ export class DxlinkSession {
     this.send({
       type: "SETUP",
       channel: 0,
-      version: "0.1-mcp-tastytrade-js/0.7.1",
+      version: this.dxlinkVersion,
       keepaliveTimeout: 60,
       acceptKeepaliveTimeout: 60,
     });

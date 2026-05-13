@@ -60,6 +60,7 @@ const captureTools = (
       allowTrading,
       dangerouslyAllowTrading,
       dxlinkIdleTimeoutMs: 30_000,
+      dxlinkVersion: "0.1-test/0.0.0",
     },
     allowTrading,
     dangerouslyAllowTrading,

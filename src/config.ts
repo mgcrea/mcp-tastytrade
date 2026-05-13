@@ -1,6 +1,10 @@
 import { z } from "zod";
 
+import { BUILD_INFO } from "./build-info.js";
+
 export const TastytradeEnv = z.enum(["prod", "cert"]);
+
+const DEFAULT_DXLINK_VERSION = `0.1-mcp-tastytrade-js/${BUILD_INFO.version}`;
 export type TastytradeEnv = z.infer<typeof TastytradeEnv>;
 
 export const BASE_URLS: Record<TastytradeEnv, string> = {
@@ -17,6 +21,12 @@ const ConfigSchema = z.object({
   allowTrading: z.boolean().default(false),
   dangerouslyAllowTrading: z.boolean().default(false),
   dxlinkIdleTimeoutMs: z.number().int().positive().default(30_000),
+  // SETUP `version` field sent to DXLink. Default identifies us as
+  // "<protoVersion>-<clientName>/<clientVersion>", auto-tracked from
+  // package.json. Override via env to mimic the official SDK
+  // (e.g. "0.1-DXF-JS/0.3.0") when probing for server-side client
+  // fingerprinting.
+  dxlinkVersion: z.string().min(1).default(DEFAULT_DXLINK_VERSION),
 });
 
 export type Config = z.infer<typeof ConfigSchema> & { baseUrl: string };
@@ -41,6 +51,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     allowTrading: isTruthy(env.TASTYTRADE_ALLOW_TRADING) || dangerouslyAllowTrading,
     dangerouslyAllowTrading,
     dxlinkIdleTimeoutMs: parseNumberOpt(env.TASTYTRADE_DXLINK_IDLE_TIMEOUT_MS),
+    dxlinkVersion: env.TASTYTRADE_DXLINK_VERSION,
   });
 
   return {
