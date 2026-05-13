@@ -5,9 +5,20 @@ import { getAccount, getCustomer, listAccounts } from "../client/endpoints/accou
 import { getBalances } from "../client/endpoints/balances.js";
 import { getPositions } from "../client/endpoints/positions.js";
 import type { TastytradeHttpClient } from "../client/http.js";
+import {
+  enrichPositions,
+  isActivePosition,
+  isOptionPosition,
+  type RawPosition,
+} from "../lib/position-greeks.js";
+import type { DxlinkSession } from "../streaming/dxlink-session.js";
 import { wrap } from "./util.js";
 
-export const registerAccountTools = (server: McpServer, http: TastytradeHttpClient): void => {
+export const registerAccountTools = (
+  server: McpServer,
+  http: TastytradeHttpClient,
+  session: DxlinkSession,
+): void => {
   server.tool(
     "list_accounts",
     "List the customer's TastyTrade accounts (account numbers, nicknames, types).",
@@ -46,5 +57,34 @@ export const registerAccountTools = (server: McpServer, http: TastytradeHttpClie
       includeMarks: z.boolean().optional(),
     },
     async ({ accountNumber, ...query }) => wrap(() => getPositions(http, accountNumber, query)),
+  );
+
+  server.tool(
+    "get_position_greeks",
+    "Per-position greeks + per-underlying and portfolio-net totals for an account. Equity options use streamed Greeks via the long-lived DXLink session; equity positions contribute delta=1 per share. Contributions follow desk convention: signedQuantity × multiplier × per-contract greek. Returns missingMarks for any option leg whose quote/greeks couldn't be fetched.",
+    {
+      accountNumber: z.string(),
+      includeClosedPositions: z.boolean().optional(),
+      timeoutMs: z.number().int().positive().max(15000).optional(),
+    },
+    async ({ accountNumber, includeClosedPositions, timeoutMs }) =>
+      wrap(async () => {
+        const raw = await getPositions(
+          http,
+          accountNumber,
+          includeClosedPositions !== undefined ? { includeClosedPositions } : {},
+        );
+        const positions = ((raw.items ?? []) as RawPosition[]).filter(isActivePosition);
+        const optionSymbols = positions.filter(isOptionPosition).map((p) => p.symbol);
+        const snaps =
+          optionSymbols.length > 0
+            ? await session.snapshot(
+                optionSymbols,
+                ["Quote", "Greeks"],
+                timeoutMs,
+              )
+            : [];
+        return enrichPositions(positions, snaps, accountNumber);
+      }),
   );
 };

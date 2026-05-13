@@ -17,7 +17,7 @@ export type ToolContext = {
 };
 
 export const registerTools = (server: McpServer, ctx: ToolContext): void => {
-  registerAccountTools(server, ctx.http);
+  registerAccountTools(server, ctx.http, ctx.session);
   registerInstrumentTools(server, ctx.http, ctx.session);
   registerTransactionTools(server, ctx.http);
   registerOrderReadTools(server, ctx.http);
