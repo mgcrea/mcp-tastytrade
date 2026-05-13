@@ -10,8 +10,10 @@ const tryGit = (cmd: string): string => {
   }
 };
 
-const gitCommit = tryGit("git rev-parse --short HEAD");
-const gitCommitDate = tryGit("git log -1 --format=%cI");
+// Env vars take precedence so Docker / CI builds (where `.git` isn't in the
+// build context) can pass git info via --build-arg.
+const gitCommit = process.env.GIT_COMMIT || tryGit("git rev-parse --short HEAD");
+const gitCommitDate = process.env.GIT_COMMIT_DATE || tryGit("git log -1 --format=%cI");
 
 export default defineConfig({
   entry: ["src/index.ts", "src/cli.ts"],

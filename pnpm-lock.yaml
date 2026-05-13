@@ -18,6 +18,9 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      '@dxfeed/dxlink-api':
+        specifier: ^0.3.0
+        version: 0.3.0
       '@types/node':
         specifier: ^22.10.0
         version: 22.19.18
@@ -62,6 +65,21 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
+
+  '@dxfeed/dxlink-api@0.3.0':
+    resolution: {integrity: sha512-0XTR6M3kDMnhiOoR/UfCw1iUHLUY4If4u1XHG/p18P2bmUOrmGOJQQQt+2crtoHzcDnhs2tSc4ecefdsNxnTeg==}
+
+  '@dxfeed/dxlink-core@0.3.0':
+    resolution: {integrity: sha512-Yvz9ZtNa0MonNTyaZUbOWj+5Geb6TYMJScot6NfvIKzuSktk2STTMHdmQj7wM1AyCeSwhK26jFuVbdOwABKpbw==}
+
+  '@dxfeed/dxlink-dom@0.3.0':
+    resolution: {integrity: sha512-JUVOlz72M5LCmTwdg4bCtz15RPWDgl7Eek6FG/vzHpfIb9oNNTuxJYKU0rh44N+IRja0wfIra7ObpB0dWQuu7A==}
+
+  '@dxfeed/dxlink-feed@0.3.0':
+    resolution: {integrity: sha512-aay3XHNEiN9RnfKYd+xvtL2hKHB2UP4OI2T/ed/7CEgrwMXOvps9yD02vPg+A2+JQusIyqG+F9OEDn1S432HNA==}
+
+  '@dxfeed/dxlink-websocket-client@0.3.0':
+    resolution: {integrity: sha512-nhFKN/q1WuOmGVswVhfmI+lwPy7w9Ys5SocWn6MmCUyHkz6+tTityLIBg72yjF+rW4DZXFVmH15AgtG4f0sfVQ==}
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -1688,6 +1706,27 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@dxfeed/dxlink-api@0.3.0':
+    dependencies:
+      '@dxfeed/dxlink-core': 0.3.0
+      '@dxfeed/dxlink-dom': 0.3.0
+      '@dxfeed/dxlink-feed': 0.3.0
+      '@dxfeed/dxlink-websocket-client': 0.3.0
+
+  '@dxfeed/dxlink-core@0.3.0': {}
+
+  '@dxfeed/dxlink-dom@0.3.0':
+    dependencies:
+      '@dxfeed/dxlink-core': 0.3.0
+
+  '@dxfeed/dxlink-feed@0.3.0':
+    dependencies:
+      '@dxfeed/dxlink-core': 0.3.0
+
+  '@dxfeed/dxlink-websocket-client@0.3.0':
+    dependencies:
+      '@dxfeed/dxlink-core': 0.3.0
 
   '@emnapi/core@1.10.0':
     dependencies:
