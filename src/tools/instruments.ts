@@ -15,6 +15,7 @@ import {
 } from "../client/endpoints/market-metrics.js";
 import { searchSymbols } from "../client/endpoints/symbol-search.js";
 import type { TastytradeHttpClient } from "../client/http.js";
+import { type EnrichedLeg, fetchEnrichedChain } from "../lib/chain-greeks.js";
 import { computeExpectedMove, pickAtmStrike, pickExpiration } from "../lib/expected-move.js";
 import {
   isFilterEmpty,
@@ -148,6 +149,99 @@ export const registerInstrumentTools = (
   );
 
   server.tool(
+    "get_chain_with_greeks",
+    "Option chain slice enriched with quote (bid/ask/mid) and Greeks (delta/gamma/theta/vega/rho/IV) per leg. Bounded to a strike window around spot (default ATM±20 strikes) so the response stays compact. Use for spread / iron-condor design. Requires either expirationDate (exact YYYY-MM-DD) or daysToExpiration (nearest match).",
+    {
+      underlyingSymbol: z.string(),
+      expirationDate: z.string().optional(),
+      daysToExpiration: z.number().int().nonnegative().optional(),
+      strikeWindow: z
+        .number()
+        .int()
+        .positive()
+        .max(100)
+        .optional()
+        .describe("Number of strikes either side of spot (default 20)"),
+      optionType: z.enum(["call", "put", "both"]).optional(),
+      timeoutMs: z.number().int().positive().max(15000).optional(),
+    },
+    async ({ underlyingSymbol, expirationDate, daysToExpiration, ...rest }) =>
+      wrap(async () => {
+        if (!expirationDate && daysToExpiration === undefined) {
+          throw new Error("Provide either expirationDate or daysToExpiration");
+        }
+        return fetchEnrichedChain(http, session, underlyingSymbol, {
+          ...(expirationDate ? { expirationDate } : {}),
+          ...(daysToExpiration !== undefined ? { daysToExpiration } : {}),
+          ...rest,
+        });
+      }),
+  );
+
+  server.tool(
+    "find_strikes_by_delta",
+    "For each target delta, find the strike in the chain whose actual delta is closest. Useful for iron-condor / wing-selection workflows. Positive targets are matched against calls; negative targets against puts. Scans a strike window (default ATM±25) around spot.",
+    {
+      underlyingSymbol: z.string(),
+      expirationDate: z.string().optional(),
+      daysToExpiration: z.number().int().nonnegative().optional(),
+      deltas: z.array(z.number().min(-1).max(1)).min(1).max(20),
+      strikeWindow: z.number().int().positive().max(100).optional(),
+      timeoutMs: z.number().int().positive().max(15000).optional(),
+    },
+    async ({
+      underlyingSymbol,
+      expirationDate,
+      daysToExpiration,
+      deltas,
+      strikeWindow,
+      timeoutMs,
+    }) =>
+      wrap(async () => {
+        if (!expirationDate && daysToExpiration === undefined) {
+          throw new Error("Provide either expirationDate or daysToExpiration");
+        }
+        const chain = await fetchEnrichedChain(http, session, underlyingSymbol, {
+          ...(expirationDate ? { expirationDate } : {}),
+          ...(daysToExpiration !== undefined ? { daysToExpiration } : {}),
+          strikeWindow: strikeWindow ?? 25,
+          ...(timeoutMs ? { timeoutMs } : {}),
+        });
+        const matches = deltas.map((target) => pickStrikeByDelta(chain.legs, target));
+        return {
+          underlyingSymbol: chain.underlyingSymbol,
+          expirationDate: chain.expirationDate,
+          daysToExpiration: chain.daysToExpiration,
+          underlyingPrice: chain.underlyingPrice,
+          atmStrike: chain.atmStrike,
+          matches,
+        };
+      }),
+  );
+
+  server.tool(
+    "get_earnings_calendar",
+    "Bundled earnings dates for a batch of symbols. Wraps get_market_metrics and extracts {symbol, expectedReportDate, timeOfDay, estimatedEarnings} per name. Optional from/to (YYYY-MM-DD) filter on expectedReportDate; when neither is provided, all rows pass through (including those with no upcoming date).",
+    {
+      symbols: z.array(z.string()).min(1).max(100),
+      from: z.string().optional().describe("YYYY-MM-DD inclusive lower bound"),
+      to: z.string().optional().describe("YYYY-MM-DD inclusive upper bound"),
+    },
+    async ({ symbols, from, to }) =>
+      wrap(async () => {
+        const raw = await getMarketMetrics(http, symbols);
+        const rows = ((raw.items ?? []) as Record<string, unknown>[]).map(extractEarnings);
+        if (!from && !to) return rows;
+        return rows.filter((r) => {
+          if (!r.expectedReportDate) return false;
+          if (from && r.expectedReportDate < from) return false;
+          if (to && r.expectedReportDate > to) return false;
+          return true;
+        });
+      }),
+  );
+
+  server.tool(
     "get_future",
     "Get instrument metadata for a futures symbol.",
     { symbol: z.string() },
@@ -181,4 +275,68 @@ export const registerInstrumentTools = (
     { symbol: z.string() },
     async ({ symbol }) => wrap(() => getEarningsHistory(http, symbol)),
   );
+};
+
+type StrikeMatch = {
+  targetDelta: number;
+  deltaDiff: number | null;
+  leg: EnrichedLeg | null;
+};
+
+export const pickStrikeByDelta = (legs: EnrichedLeg[], target: number): StrikeMatch => {
+  const wantType: "Call" | "Put" = target >= 0 ? "Call" : "Put";
+  const candidates = legs.filter(
+    (l): l is EnrichedLeg & { delta: number } =>
+      l.optionType === wantType && l.delta !== null,
+  );
+  if (candidates.length === 0) return { targetDelta: target, deltaDiff: null, leg: null };
+  const best = candidates.toSorted(
+    (a, b) => Math.abs(a.delta - target) - Math.abs(b.delta - target),
+  )[0]!;
+  return { targetDelta: target, deltaDiff: Math.abs(best.delta - target), leg: best };
+};
+
+type EarningsRow = {
+  symbol: string;
+  expectedReportDate: string | null;
+  timeOfDay: string | null;
+  estimatedEarnings: number | null;
+};
+
+const firstString = (...vals: unknown[]): string | null => {
+  for (const v of vals) if (typeof v === "string" && v !== "") return v;
+  return null;
+};
+
+const firstNumber = (...vals: unknown[]): number | null => {
+  for (const v of vals) {
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v !== "") {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return null;
+};
+
+export const extractEarnings = (metric: Record<string, unknown>): EarningsRow => {
+  const earnings = (metric.earnings ?? {}) as Record<string, unknown>;
+  return {
+    symbol: String(metric.symbol ?? ""),
+    expectedReportDate: firstString(
+      earnings.expectedReportDate,
+      metric.earningsExpectedReportDate,
+      metric.expectedReportDate,
+    ),
+    timeOfDay: firstString(
+      earnings.timeOfDay,
+      earnings.expectedTimeOfDay,
+      metric.earningsTimeOfDay,
+    ),
+    estimatedEarnings: firstNumber(
+      earnings.estimatedEarnings,
+      earnings.consensusEstimate,
+      metric.estimatedEarnings,
+    ),
+  };
 };
