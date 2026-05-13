@@ -70,6 +70,7 @@ describe("tool registration", () => {
     expect(names).not.toContain("dry_run_order");
     expect(names).not.toContain("place_order");
     expect(names).not.toContain("cancel_order");
+    expect(names).not.toContain("cancel_all_orders");
     expect(names).not.toContain("create_watchlist");
     expect(names).not.toContain("delete_watchlist");
   });
@@ -78,6 +79,7 @@ describe("tool registration", () => {
     const names = captureToolNames(true);
     expect(names).toContain("place_order");
     expect(names).toContain("cancel_order");
+    expect(names).toContain("cancel_all_orders");
     expect(names).toContain("replace_order");
     expect(names).toContain("create_watchlist");
     expect(names).toContain("update_watchlist");

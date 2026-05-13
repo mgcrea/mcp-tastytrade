@@ -187,12 +187,13 @@ pnpm docker:push                # pushes both :latest and :<package.json version
 
 ### Mutating (only when `TASTYTRADE_ALLOW_TRADING=1`)
 
-| Tool                                                       | Description                                                               |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `place_order`                                              | Submit an order. Without `confirm: true`, returns a dry-run preview.      |
-| `cancel_order`                                             | Cancel an open order. Requires `confirm: true`.                           |
-| `replace_order`                                            | Replace an open order. Without `confirm: true`, dry-runs the replacement. |
-| `create_watchlist`, `update_watchlist`, `delete_watchlist` | Private watchlist management.                                             |
+| Tool                                                       | Description                                                                                                                                                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `place_order`                                              | Submit an order. Without `confirm: true`, returns a dry-run preview.                                                                                                                              |
+| `cancel_order`                                             | Cancel an open order. Requires `confirm: true`.                                                                                                                                                   |
+| `cancel_all_orders`                                        | Bulk-cancel every open order (optional `underlyingSymbol` filter). Without `confirm: true`, returns the would-cancel list. Returns `{cancelled, failed}` on submit so per-order failures surface. |
+| `replace_order`                                            | Replace an open order. Without `confirm: true`, dry-runs the replacement.                                                                                                                         |
+| `create_watchlist`, `update_watchlist`, `delete_watchlist` | Private watchlist management.                                                                                                                                                                     |
 
 ## Development
 

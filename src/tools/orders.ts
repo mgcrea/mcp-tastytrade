@@ -128,6 +128,60 @@ export const registerOrderWriteTools = (
   );
 
   server.tool(
+    "cancel_all_orders",
+    skipConfirm
+      ? "Cancel every open order on an account (optionally filtered by underlyingSymbol). TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — cancels immediately by default. Pass confirm=false to force a dry-run preview. Returns {cancelled, failed} on submit; partial failures are reported per order."
+      : "Cancel every open order on an account (optionally filtered by underlyingSymbol). Call with confirm=false (default) to preview which orders would be cancelled; confirm=true to submit. Returns {cancelled, failed} on submit so you can see any per-order failures.",
+    {
+      accountNumber: z.string(),
+      underlyingSymbol: z.string().optional(),
+      confirm: z.boolean().default(skipConfirm),
+    },
+    async ({ accountNumber, underlyingSymbol, confirm }) =>
+      wrap(async () => {
+        const raw = await listOrders(http, accountNumber, {
+          status: [...CANCELLABLE_STATUSES],
+          ...(underlyingSymbol ? { underlyingSymbol } : {}),
+        });
+        const cancellable: ReadonlySet<string> = new Set(CANCELLABLE_STATUSES);
+        const open = ((raw.items ?? []) as RawOpenOrder[]).filter(
+          (o) => typeof o.status === "string" && cancellable.has(o.status),
+        );
+
+        if (open.length === 0) {
+          return {
+            submitted: false,
+            wouldCancel: [],
+            message: underlyingSymbol
+              ? `No open orders for ${underlyingSymbol} on ${accountNumber}.`
+              : `No open orders on ${accountNumber}.`,
+          };
+        }
+
+        if (!confirm) {
+          return {
+            submitted: false,
+            wouldCancel: open.map(slimOrder),
+            message: `Re-call with confirm=true to cancel ${open.length} order(s).`,
+          };
+        }
+
+        const results = await Promise.allSettled(
+          open.map((o) => cancelOrder(http, accountNumber, o.id!)),
+        );
+        const cancelled: (number | string)[] = [];
+        const failed: { orderId: number | string; error: string }[] = [];
+        for (let i = 0; i < open.length; i++) {
+          const r = results[i]!;
+          const id = open[i]!.id!;
+          if (r.status === "fulfilled") cancelled.push(id);
+          else failed.push({ orderId: id, error: errorMessage(r.reason) });
+        }
+        return { submitted: true, cancelled, failed };
+      }),
+  );
+
+  server.tool(
     "replace_order",
     skipConfirm
       ? "Replace an open order. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — replaces by default. Pass confirm=false to force a dry-run preview instead."
@@ -152,4 +206,40 @@ export const registerOrderWriteTools = (
         return { replaced: true, result };
       }),
   );
+};
+
+// TastyTrade order statuses that are eligible for cancellation. Excludes terminal
+// states (Filled, Cancelled, Rejected, Expired, Replaced) and in-flight cancels.
+export const CANCELLABLE_STATUSES = ["Received", "Live", "Routed"] as const;
+
+export type RawOpenOrder = {
+  id?: number | string;
+  status?: string;
+  underlyingSymbol?: string;
+  orderType?: string;
+  timeInForce?: string;
+  price?: number | string;
+  priceEffect?: string;
+  legs?: unknown[];
+};
+
+export const slimOrder = (o: RawOpenOrder): Record<string, unknown> => ({
+  id: o.id ?? null,
+  status: o.status ?? null,
+  underlyingSymbol: o.underlyingSymbol ?? null,
+  orderType: o.orderType ?? null,
+  timeInForce: o.timeInForce ?? null,
+  price: o.price ?? null,
+  priceEffect: o.priceEffect ?? null,
+  legCount: Array.isArray(o.legs) ? o.legs.length : 0,
+});
+
+const errorMessage = (reason: unknown): string => {
+  if (reason instanceof Error) return reason.message;
+  if (typeof reason === "string") return reason;
+  try {
+    return JSON.stringify(reason);
+  } catch {
+    return String(reason);
+  }
 };
