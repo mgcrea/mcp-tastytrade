@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
+import { BUILD_INFO } from "../build-info.js";
 import type { ToolContext } from "./index.js";
 import { wrap } from "./util.js";
 
@@ -20,13 +21,18 @@ export const registerDiagnosticsTool = (server: McpServer, ctx: ToolContext): vo
     async ({ logLimit }) =>
       wrap(async () => ({
         server: {
-          version: ctx.serverVersion,
+          name: BUILD_INFO.name,
+          version: BUILD_INFO.version,
+          gitCommit: BUILD_INFO.gitCommit,
+          gitCommitDate: BUILD_INFO.gitCommitDate,
+          nodeVersion: process.version,
           env: ctx.config.env,
           baseUrl: ctx.config.baseUrl,
           scope: ctx.config.scope,
           allowTrading: ctx.config.allowTrading,
           dangerouslyAllowTrading: ctx.config.dangerouslyAllowTrading,
           dxlinkIdleTimeoutMs: ctx.config.dxlinkIdleTimeoutMs,
+          dxlinkVersion: ctx.config.dxlinkVersion,
         },
         oauth: ctx.http.accessToken.info(),
         dxlink: ctx.session.getDiagnostics(),

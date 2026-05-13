@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
+import { BUILD_INFO } from "./build-info.js";
 import { loadConfig } from "./config.js";
 import { createServer } from "./server.js";
 
@@ -13,6 +14,9 @@ const stderrLogger = {
 };
 
 const main = async (): Promise<void> => {
+  stderrLogger.warn(
+    `${BUILD_INFO.name}@${BUILD_INFO.version} (git ${BUILD_INFO.gitCommit} ${BUILD_INFO.gitCommitDate}, node ${process.version})`,
+  );
   const config = loadConfig();
   const { server, session } = createServer({ config, logger: stderrLogger });
   const transport = new StdioServerTransport();
