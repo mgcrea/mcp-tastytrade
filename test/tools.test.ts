@@ -62,6 +62,10 @@ describe("tool registration", () => {
     expect(names).toContain("get_option_chain");
     expect(names).toContain("get_option_chain_summary");
     expect(names).toContain("get_expected_move");
+    expect(names).toContain("get_position_greeks");
+    expect(names).toContain("get_chain_with_greeks");
+    expect(names).toContain("find_strikes_by_delta");
+    expect(names).toContain("get_earnings_calendar");
     // dry_run_order was folded into place_order(confirm:false)
     expect(names).not.toContain("dry_run_order");
     expect(names).not.toContain("place_order");
