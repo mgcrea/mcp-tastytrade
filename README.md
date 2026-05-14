@@ -172,6 +172,7 @@ pnpm docker:push                # pushes both :latest and :<package.json version
 | `get_positions`                                                                      | Open / closed positions.                                                                                                                     |
 | `get_position_greeks`                                                                | Per-position greeks + per-underlying and portfolio-net totals (signed-quantity × multiplier × per-contract greek).                           |
 | `list_orders`, `get_order`                                                           | Order history / lookup.                                                                                                                      |
+| `get_complex_order`                                                                  | Fetch a single complex order (OTOCO/OCO/OTO bracket) including all linked child orders.                                                      |
 | `list_transactions`, `get_transaction`                                               | Account transactions.                                                                                                                        |
 | `search_symbols`                                                                     | Symbol search by prefix.                                                                                                                     |
 | `get_equity`, `get_equity_option`, `get_future`, `get_cryptocurrency`                | Instrument metadata.                                                                                                                         |
@@ -196,7 +197,52 @@ pnpm docker:push                # pushes both :latest and :<package.json version
 | `cancel_order`                                             | Cancel an open order. Requires `confirm: true`.                                                                                                                                                   |
 | `cancel_all_orders`                                        | Bulk-cancel every open order (optional `underlyingSymbol` filter). Without `confirm: true`, returns the would-cancel list. Returns `{cancelled, failed}` on submit so per-order failures surface. |
 | `replace_order`                                            | Replace an open order. Without `confirm: true`, dry-runs the replacement.                                                                                                                         |
+| `place_complex_order`                                      | Submit an OTOCO bracket (entry + linked take-profit + stop-loss), an OCO pair attached to an existing position, or an OTO chain. Without `confirm: true`, returns a dry-run preview.              |
+| `cancel_complex_order`                                     | Cancel a complex order and all its linked children. Requires `confirm: true`.                                                                                                                     |
 | `create_watchlist`, `update_watchlist`, `delete_watchlist` | Private watchlist management.                                                                                                                                                                     |
+
+### Bracket orders / stop-loss
+
+To attach a stop-loss (and optional take-profit) to an entry in a single atomic submission, use `place_complex_order` with `type: "OTOCO"`. Filling or cancelling one child cancels the other, so the stop can't be orphaned if the entry fills.
+
+```jsonc
+// place_complex_order
+{
+  "accountNumber": "5WX12345",
+  "order": {
+    "type": "OTOCO",
+    "triggerOrder": {
+      "timeInForce": "Day",
+      "orderType": "Market",
+      "legs": [
+        { "instrumentType": "Equity", "symbol": "SPY", "quantity": 1, "action": "Buy to Open" },
+      ],
+    },
+    "orders": [
+      {
+        "timeInForce": "GTC",
+        "orderType": "Limit",
+        "price": 620,
+        "priceEffect": "Credit",
+        "legs": [
+          { "instrumentType": "Equity", "symbol": "SPY", "quantity": 1, "action": "Sell to Close" },
+        ],
+      },
+      {
+        "timeInForce": "GTC",
+        "orderType": "Stop",
+        "stopTrigger": 540,
+        "legs": [
+          { "instrumentType": "Equity", "symbol": "SPY", "quantity": 1, "action": "Sell to Close" },
+        ],
+      },
+    ],
+  },
+  "confirm": false,
+}
+```
+
+For an OCO pair attached to a position you already hold, omit `triggerOrder` and use `type: "OCO"` with the two exit orders.
 
 ## Development
 

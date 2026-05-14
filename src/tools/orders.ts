@@ -2,6 +2,13 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 import {
+  cancelComplexOrder,
+  type ComplexOrderRequest,
+  dryRunComplexOrder,
+  getComplexOrder,
+  placeComplexOrder,
+} from "../client/endpoints/complex-orders.js";
+import {
   cancelOrder,
   dryRunOrder,
   getOrder,
@@ -40,6 +47,48 @@ const OrderRequestSchema = z.object({
   legs: z.array(OrderLegSchema).min(1).max(4),
 });
 
+export const ComplexOrderRequestSchema = z
+  .object({
+    type: z
+      .enum(["OTOCO", "OCO", "OTO"])
+      .describe(
+        'OTOCO = entry triggers a linked profit-taker + stop-loss OCO pair. OCO = two orders ("brackets") attached to an existing position — fill or cancel of one cancels the other. OTO = entry triggers one or more follow-on orders without OCO linkage.',
+      ),
+    triggerOrder: OrderRequestSchema.optional().describe(
+      "The entry order for OTOCO/OTO. Must be omitted for OCO.",
+    ),
+    orders: z
+      .array(OrderRequestSchema)
+      .min(1)
+      .max(4)
+      .describe(
+        "Child orders. For OTOCO/OCO, must be exactly 2 (typically a take-profit Limit and a Stop/Stop Limit stop-loss).",
+      ),
+  })
+  .superRefine((v, ctx) => {
+    if ((v.type === "OTOCO" || v.type === "OTO") && !v.triggerOrder) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${v.type} requires triggerOrder`,
+        path: ["triggerOrder"],
+      });
+    }
+    if (v.type === "OCO" && v.triggerOrder) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "OCO must not include triggerOrder",
+        path: ["triggerOrder"],
+      });
+    }
+    if ((v.type === "OTOCO" || v.type === "OCO") && v.orders.length !== 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${v.type} requires exactly 2 child orders (e.g. take-profit + stop-loss)`,
+        path: ["orders"],
+      });
+    }
+  });
+
 export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpClient): void => {
   server.tool(
     "list_orders",
@@ -62,6 +111,13 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
     "Get a single order by id.",
     { accountNumber: z.string(), orderId: z.union([z.string(), z.number()]) },
     async ({ accountNumber, orderId }) => wrap(() => getOrder(http, accountNumber, orderId)),
+  );
+
+  server.tool(
+    "get_complex_order",
+    "Get a single complex order (OTOCO/OCO/OTO bracket) by id, including all linked child orders.",
+    { accountNumber: z.string(), orderId: z.union([z.string(), z.number()]) },
+    async ({ accountNumber, orderId }) => wrap(() => getComplexOrder(http, accountNumber, orderId)),
   );
 };
 
@@ -204,6 +260,71 @@ export const registerOrderWriteTools = (
         }
         const result = await replaceOrder(http, accountNumber, orderId, order as OrderRequest);
         return { replaced: true, result };
+      }),
+  );
+
+  const placeComplexDescription = skipConfirm
+    ? "Submit a complex order (OTOCO bracket / OCO pair / OTO chain) so an entry and its stop-loss + take-profit are linked atomically. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — submits by default. Pass confirm=false to force a dry-run preview instead."
+    : "Submit a complex order (OTOCO bracket / OCO pair / OTO chain) so an entry and its stop-loss + take-profit are linked atomically. Call with confirm=false (default) for a dry-run preview; confirm=true to submit. For OTOCO: triggerOrder is the entry, orders=[take-profit Limit, stop-loss Stop/Stop Limit]. Filling/cancelling one child cancels the other so the stop can't be orphaned.";
+
+  server.tool(
+    "place_complex_order",
+    placeComplexDescription,
+    {
+      accountNumber: z.string(),
+      order: ComplexOrderRequestSchema,
+      confirm: z
+        .boolean()
+        .default(skipConfirm)
+        .describe(
+          skipConfirm
+            ? "true (default with DANGEROUSLY flag) submits; false forces a dry-run preview."
+            : "false (default) returns a dry-run preview; true submits the order.",
+        ),
+    },
+    async ({ accountNumber, order, confirm }) =>
+      wrap(async () => {
+        if (!confirm) {
+          const preview = await dryRunComplexOrder(
+            http,
+            accountNumber,
+            order as ComplexOrderRequest,
+          );
+          return {
+            submitted: false,
+            message: "Dry-run preview only. Re-call with confirm=true to submit this bracket.",
+            preview,
+          };
+        }
+        const submitted = await placeComplexOrder(
+          http,
+          accountNumber,
+          order as ComplexOrderRequest,
+        );
+        return { submitted: true, result: submitted };
+      }),
+  );
+
+  server.tool(
+    "cancel_complex_order",
+    skipConfirm
+      ? "Cancel a complex order (OTOCO/OCO/OTO) and all of its linked child orders. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — cancels immediately by default."
+      : "Cancel a complex order (OTOCO/OCO/OTO) and all of its linked child orders.",
+    {
+      accountNumber: z.string(),
+      orderId: z.union([z.string(), z.number()]),
+      confirm: z.boolean().default(skipConfirm),
+    },
+    async ({ accountNumber, orderId, confirm }) =>
+      wrap(async () => {
+        if (!confirm) {
+          return {
+            cancelled: false,
+            message: `Re-call with confirm=true to cancel complex order ${String(orderId)}.`,
+          };
+        }
+        const result = await cancelComplexOrder(http, accountNumber, orderId);
+        return { cancelled: true, result };
       }),
   );
 };

@@ -78,6 +78,7 @@ describe("tool registration", () => {
     expect(names).toContain("get_balances");
     expect(names).toContain("get_positions");
     expect(names).toContain("list_orders");
+    expect(names).toContain("get_complex_order");
     expect(names).toContain("get_quote");
     expect(names).toContain("get_quotes");
     expect(names).toContain("get_option_chain");
@@ -103,6 +104,8 @@ describe("tool registration", () => {
     expect(names).toContain("cancel_order");
     expect(names).toContain("cancel_all_orders");
     expect(names).toContain("replace_order");
+    expect(names).toContain("place_complex_order");
+    expect(names).toContain("cancel_complex_order");
     expect(names).toContain("create_watchlist");
     expect(names).toContain("update_watchlist");
     expect(names).toContain("delete_watchlist");
