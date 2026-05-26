@@ -83,16 +83,12 @@ npx @modelcontextprotocol/inspector node dist/cli.js
 
 ## Run via Docker
 
-The published image is [`mgcrea/mcp-tastytrade`](https://hub.docker.com/r/mgcrea/mcp-tastytrade) on Docker Hub. Pull the latest tag or pin a version:
+A multi-stage [Dockerfile](./Dockerfile) ships with the project. CI publishes a
+multi-arch image (`linux/amd64`, `linux/arm64`) to GHCR on every push to `main`
+and on `v*.*.*` tags:
 
 ```bash
-docker pull mgcrea/mcp-tastytrade:latest
-```
-
-Or build locally:
-
-```bash
-pnpm docker:build          # tags mgcrea/mcp-tastytrade:latest and :<version>
+docker pull ghcr.io/mgcrea/mcp-tastytrade:latest
 ```
 
 The container runs `node /app/dist/cli.js` as PID 1 and speaks JSON-RPC over stdio. Pass credentials via `-e VAR` (forwarded from the spawning shell) or `--env-file`.
@@ -119,7 +115,7 @@ The container runs `node /app/dist/cli.js` as PID 1 and speaks JSON-RPC over std
         "TASTYTRADE_ENV",
         "-e",
         "TASTYTRADE_ALLOW_TRADING",
-        "mgcrea/mcp-tastytrade:latest"
+        "ghcr.io/mgcrea/mcp-tastytrade:latest"
       ],
       "env": {
         "TASTYTRADE_CLIENT_SECRET": "...",
@@ -142,22 +138,20 @@ Notes:
 If you'd rather not commit secrets to `.mcp.json`, point `--env-file` at a local `.env` instead:
 
 ```json
-"args": ["run", "--rm", "-i", "--env-file", "/abs/path/to/.env", "mgcrea/mcp-tastytrade:latest"]
+"args": ["run", "--rm", "-i", "--env-file", "/abs/path/to/.env", "ghcr.io/mgcrea/mcp-tastytrade:latest"]
 ```
 
-### Publishing
+### Build locally
 
 ```bash
-docker login                    # once, against docker.io
-pnpm docker:release             # multi-arch (amd64 + arm64) buildx + push
+pnpm docker:build      # single-arch local image
+pnpm docker:buildx     # multi-arch (linux/amd64,linux/arm64)
+pnpm docker:release    # multi-arch + push to Docker Hub (mgcrea/mcp-tastytrade)
 ```
 
-Or, for a single-arch local image:
-
-```bash
-pnpm docker:build
-pnpm docker:push                # pushes both :latest and :<package.json version>
-```
+The build script passes `GIT_COMMIT` / `GIT_COMMIT_DATE` as build args so the
+bundle bakes in real git info even though `.git` isn't copied into the build
+context.
 
 ## Tools
 
