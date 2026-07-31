@@ -133,6 +133,7 @@ const makeHarness = (
     idleTimeoutMs?: number;
     cacheTtlMs?: number;
     lingerMs?: number;
+    maxReconnectAttempts?: number;
   } = {},
 ): Harness => {
   const sockets: FakeWS[] = [];
@@ -148,6 +149,9 @@ const makeHarness = (
     cacheTtlMs: opts.cacheTtlMs ?? 1_000,
     lingerMs: opts.lingerMs ?? 50,
     defaultTimeoutMs: 1_000,
+    ...(opts.maxReconnectAttempts !== undefined
+      ? { maxReconnectAttempts: opts.maxReconnectAttempts }
+      : {}),
     wsFactory: factory as unknown as (url: string) => WSLike,
     getToken: async () => {
       getTokenCalls.count += 1;
@@ -318,6 +322,33 @@ describe("DxlinkSession", () => {
     expect(getTokenCalls.count).toBe(1);
     // OAuth still invalidated so the *next* user-initiated call gets a fresh access token.
     expect(invalidateOAuthCalls.count).toBe(1);
+    await session.close();
+  });
+
+  it("folds the underlying transport error into the reconnect-exhausted message", async () => {
+    const { session, sockets } = makeHarness({ maxReconnectAttempts: 2 });
+    // Catch early so the rejection doesn't escape while we pump timers.
+    const settled = session.snapshot(["AAPL"]).catch((e: unknown) => e as Error);
+
+    // Every connection attempt fails the WS upgrade with a 502 (the real dxfeed
+    // outage signature). Attempts 0..2 create sockets[0..2]; the 3rd failure
+    // hits maxReconnectAttempts and gives up.
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      await flush(); // let connect()'s async getToken resolve and create the socket
+      const ws = sockets[attempt]!;
+      ws.emit("error", new Error("Unexpected server response: 502"));
+      ws.emit("close");
+      await vi.advanceTimersByTimeAsync(5_000); // past the longest backoff
+    }
+
+    const err = await settled;
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toContain("reconnect exhausted");
+    expect((err as Error).message).toContain("502");
+
+    const diag = session.getDiagnostics();
+    expect(diag.lastTransportError).toContain("502");
+    expect(diag.lastError).toContain("502");
     await session.close();
   });
 

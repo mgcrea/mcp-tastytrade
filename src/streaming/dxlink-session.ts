@@ -62,6 +62,9 @@ export type SessionDiagnostics = {
   reconnectAttempts: number;
   lastConnectedAt: string | null;
   lastError: string | null;
+  // Most recent WebSocket transport error (502, TLS, ECONNREFUSED, …). Survives
+  // the generic "reconnect exhausted" overwrite so the real cause stays visible.
+  lastTransportError: string | null;
   // What TT routed us to (host without query) — surfaces env-mismatch /
   // cluster-routing issues without leaking the token.
   lastDxlinkUrl: string | null;
@@ -103,6 +106,12 @@ export class DxlinkSession {
   private reconnectAttempts = 0;
   private lastConnectedAt: number | null = null;
   private lastError: string | null = null;
+  // The most recent WebSocket transport error (e.g. a 502 on the upgrade, a
+  // TLS failure, ECONNREFUSED). Captured separately from lastError because the
+  // generic "reconnect exhausted" message would otherwise overwrite it; folded
+  // back into that message and surfaced in diagnostics so the real cause is
+  // visible without trawling the logs.
+  private lastTransportError: string | null = null;
   private lastDxlinkUrl: string | null = null;
   private lastAuthState: Record<string, unknown> | null = null;
   // DXLink sends an initial AUTH_STATE:UNAUTHORIZED *before* we've sent AUTH —
@@ -204,6 +213,7 @@ export class DxlinkSession {
       lastConnectedAt:
         this.lastConnectedAt !== null ? new Date(this.lastConnectedAt).toISOString() : null,
       lastError: this.lastError,
+      lastTransportError: this.lastTransportError,
       lastDxlinkUrl: this.lastDxlinkUrl,
       lastAuthState: this.lastAuthState,
     };
@@ -320,7 +330,10 @@ export class DxlinkSession {
       this.ws = ws;
       ws.on("open", () => this.handleOpen());
       ws.on("message", (raw: unknown) => this.handleRawMessage(raw));
-      ws.on("error", (err: unknown) => this.logger.warn?.("dxlink: ws error", err));
+      ws.on("error", (err: unknown) => {
+        this.lastTransportError = err instanceof Error ? err.message : String(err);
+        this.logger.warn?.("dxlink: ws error", this.lastTransportError);
+      });
       ws.on("close", () => this.handleClose());
     } catch (err) {
       this.lastError = err instanceof Error ? err.message : String(err);
@@ -447,6 +460,7 @@ export class DxlinkSession {
           this.reconnectAttempts = 0;
           this.lastConnectedAt = this.now();
           this.lastError = null;
+          this.lastTransportError = null;
           this.replaySubscriptions();
           this.resolveReadyPromise();
         }
@@ -503,7 +517,12 @@ export class DxlinkSession {
   private scheduleReconnect(): void {
     if (this.state === "closed") return;
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      const err = new Error(`DXLink reconnect exhausted (${this.maxReconnectAttempts} attempts)`);
+      const detail = this.lastTransportError
+        ? `; last transport error: ${this.lastTransportError}`
+        : "";
+      const err = new Error(
+        `DXLink reconnect exhausted (${this.maxReconnectAttempts} attempts)${detail}`,
+      );
       this.logger.error?.("dxlink: giving up", err.message);
       this.failReady(err);
       this.wakeAllWaiters();
