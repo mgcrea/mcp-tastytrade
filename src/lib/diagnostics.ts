@@ -1,5 +1,5 @@
 // In-memory ring buffer for recent log lines. Tee'd from the stderr logger
-// so the get_diagnostics tool can surface what would otherwise scroll past
+// so the tastytrade_get_diagnostics tool can surface what would otherwise scroll past
 // in the MCP host's server-log panel.
 
 export type LogLevel = "debug" | "warn" | "error";

@@ -19,53 +19,75 @@ export const registerAccountTools = (
   http: TastytradeHttpClient,
   provider: MarketDataProvider,
 ): void => {
-  server.tool(
-    "list_accounts",
-    "List the customer's TastyTrade accounts (account numbers, nicknames, types).",
-    {},
+  server.registerTool(
+    "tastytrade_list_accounts",
+    {
+      description: "List the customer's TastyTrade accounts (account numbers, nicknames, types).",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
     async () => wrap(() => listAccounts(http)),
   );
 
-  server.tool(
-    "get_account",
-    "Get details for a specific TastyTrade account.",
-    { accountNumber: z.string().describe("Account number, e.g. 5WX12345") },
+  server.registerTool(
+    "tastytrade_get_account",
+    {
+      description: "Get details for a specific TastyTrade account.",
+      inputSchema: { accountNumber: z.string().describe("Account number, e.g. 5WX12345") },
+      annotations: { readOnlyHint: true },
+    },
     async ({ accountNumber }) => wrap(() => getAccount(http, accountNumber)),
   );
 
-  server.tool("get_customer", "Get the authenticated customer profile.", {}, async () =>
-    wrap(() => getCustomer(http)),
+  server.registerTool(
+    "tastytrade_get_customer",
+    {
+      description: "Get the authenticated customer profile.",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => wrap(() => getCustomer(http)),
   );
 
-  server.tool(
-    "get_balances",
-    "Get current cash and margin balances for an account.",
-    { accountNumber: z.string() },
+  server.registerTool(
+    "tastytrade_get_balances",
+    {
+      description: "Get current cash and margin balances for an account.",
+      inputSchema: { accountNumber: z.string() },
+      annotations: { readOnlyHint: true },
+    },
     async ({ accountNumber }) => wrap(() => getBalances(http, accountNumber)),
   );
 
-  server.tool(
-    "get_positions",
-    "List open (and optionally closed) positions for an account.",
+  server.registerTool(
+    "tastytrade_get_positions",
     {
-      accountNumber: z.string(),
-      underlyingSymbol: z.array(z.string()).optional(),
-      symbol: z.string().optional(),
-      instrumentType: z.string().optional(),
-      includeClosedPositions: z.boolean().optional(),
-      netPositions: z.boolean().optional(),
-      includeMarks: z.boolean().optional(),
+      description: "List open (and optionally closed) positions for an account.",
+      inputSchema: {
+        accountNumber: z.string(),
+        underlyingSymbol: z.array(z.string()).optional(),
+        symbol: z.string().optional(),
+        instrumentType: z.string().optional(),
+        includeClosedPositions: z.boolean().optional(),
+        netPositions: z.boolean().optional(),
+        includeMarks: z.boolean().optional(),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ accountNumber, ...query }) => wrap(() => getPositions(http, accountNumber, query)),
   );
 
-  server.tool(
-    "get_position_greeks",
-    "Per-position greeks + per-underlying and portfolio-net totals for an account. Equity options use streamed Greeks via the long-lived DXLink session; equity positions contribute delta=1 per share. Contributions follow desk convention: signedQuantity × multiplier × per-contract greek. Returns missingMarks for any option leg whose quote/greeks couldn't be fetched.",
+  server.registerTool(
+    "tastytrade_get_position_greeks",
     {
-      accountNumber: z.string(),
-      includeClosedPositions: z.boolean().optional(),
-      timeoutMs: z.number().int().positive().max(15000).optional(),
+      description:
+        "Per-position greeks + per-underlying and portfolio-net totals for an account. Equity options use streamed Greeks via the long-lived DXLink session; equity positions contribute delta=1 per share. Contributions follow desk convention: signedQuantity × multiplier × per-contract greek. Returns missingMarks for any option leg whose quote/greeks couldn't be fetched.",
+      inputSchema: {
+        accountNumber: z.string(),
+        includeClosedPositions: z.boolean().optional(),
+        timeoutMs: z.number().int().positive().max(15000).optional(),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ accountNumber, includeClosedPositions, timeoutMs }) =>
       wrap(async () => {

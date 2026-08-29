@@ -32,32 +32,45 @@ export const registerInstrumentTools = (
   http: TastytradeHttpClient,
   provider: MarketDataProvider,
 ): void => {
-  server.tool(
-    "search_symbols",
-    "Search for tradable symbols by prefix.",
-    { prefix: z.string().min(1) },
+  server.registerTool(
+    "tastytrade_search_symbols",
+    {
+      description: "Search for tradable symbols by prefix.",
+      inputSchema: { prefix: z.string().min(1) },
+      annotations: { readOnlyHint: true },
+    },
     async ({ prefix }) => wrap(() => searchSymbols(http, prefix)),
   );
 
-  server.tool(
-    "get_equity",
-    "Get instrument metadata for an equity symbol.",
-    { symbol: z.string() },
+  server.registerTool(
+    "tastytrade_get_equity",
+    {
+      description: "Get instrument metadata for an equity symbol.",
+      inputSchema: { symbol: z.string() },
+      annotations: { readOnlyHint: true },
+    },
     async ({ symbol }) => wrap(() => getEquity(http, symbol)),
   );
 
-  server.tool(
-    "get_equity_option",
-    "Get instrument metadata for an OCC-formatted equity option symbol.",
-    { symbol: z.string(), active: z.boolean().optional() },
+  server.registerTool(
+    "tastytrade_get_equity_option",
+    {
+      description: "Get instrument metadata for an OCC-formatted equity option symbol.",
+      inputSchema: { symbol: z.string(), active: z.boolean().optional() },
+      annotations: { readOnlyHint: true },
+    },
     async ({ symbol, active }) =>
       wrap(() => getEquityOption(http, symbol, active === undefined ? undefined : { active })),
   );
 
-  server.tool(
-    "get_option_chain_summary",
-    "Summarize all expirations for an underlying: one line per expiration with strike count and min/max strike. Tiny payload — use this first to pick an expiration, then call get_option_chain with a filter.",
-    { underlyingSymbol: z.string() },
+  server.registerTool(
+    "tastytrade_get_option_chain_summary",
+    {
+      description:
+        "Summarize all expirations for an underlying: one line per expiration with strike count and min/max strike. Tiny payload — use this first to pick an expiration, then call tastytrade_get_option_chain with a filter.",
+      inputSchema: { underlyingSymbol: z.string() },
+      annotations: { readOnlyHint: true },
+    },
     async ({ underlyingSymbol }) =>
       wrap(async () => {
         const raw = await getOptionChainNested(http, underlyingSymbol);
@@ -66,21 +79,25 @@ export const registerInstrumentTools = (
       }),
   );
 
-  server.tool(
-    "get_option_chain",
-    "Filtered option chain for an underlying. Returns a flat array of legs (one per call/put per strike) with both OCC and DXLink streamer symbols. If called without any filter, falls back to get_option_chain_summary's shape to avoid 200+ KB responses.",
+  server.registerTool(
+    "tastytrade_get_option_chain",
     {
-      underlyingSymbol: z.string(),
-      expirationDate: z.string().optional().describe("Exact YYYY-MM-DD"),
-      daysToExpirationMin: z.number().int().nonnegative().optional(),
-      daysToExpirationMax: z.number().int().positive().optional(),
-      strikeMin: z.number().positive().optional(),
-      strikeMax: z.number().positive().optional(),
-      strikeAround: z
-        .object({ center: z.number().positive(), count: z.number().int().positive().max(200) })
-        .optional()
-        .describe("Pick the N strikes nearest `center`."),
-      optionType: z.enum(["call", "put", "both"]).optional(),
+      description:
+        "Filtered option chain for an underlying. Returns a flat array of legs (one per call/put per strike) with both OCC and DXLink streamer symbols. If called without any filter, falls back to tastytrade_get_option_chain_summary's shape to avoid 200+ KB responses.",
+      inputSchema: {
+        underlyingSymbol: z.string(),
+        expirationDate: z.string().optional().describe("Exact YYYY-MM-DD"),
+        daysToExpirationMin: z.number().int().nonnegative().optional(),
+        daysToExpirationMax: z.number().int().positive().optional(),
+        strikeMin: z.number().positive().optional(),
+        strikeMax: z.number().positive().optional(),
+        strikeAround: z
+          .object({ center: z.number().positive(), count: z.number().int().positive().max(200) })
+          .optional()
+          .describe("Pick the N strikes nearest `center`."),
+        optionType: z.enum(["call", "put", "both"]).optional(),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ underlyingSymbol, ...filter }) =>
       wrap(async () => {
@@ -91,18 +108,24 @@ export const registerInstrumentTools = (
       }),
   );
 
-  server.tool(
-    "get_expected_move",
-    "Compute the ATM straddle expected ±1σ move for an underlying at a given expiration. Returns underlying spot, ATM strike, call/put mids, the straddle price (≈ 1σ move in $), upper/lower bounds, and an IV-implied move for cross-check. Requires either `expirationDate` (exact YYYY-MM-DD) or `daysToExpiration` (nearest match). Issues two short-lived DXLink snapshots (spot, then ATM call+put).",
+  server.registerTool(
+    "tastytrade_get_expected_move",
     {
-      underlyingSymbol: z.string(),
-      expirationDate: z.string().optional().describe("Exact YYYY-MM-DD"),
-      daysToExpiration: z
-        .number()
-        .int()
-        .nonnegative()
-        .optional()
-        .describe("If expirationDate is omitted, pick the expiration with DTE nearest this value"),
+      description:
+        "Compute the ATM straddle expected ±1σ move for an underlying at a given expiration. Returns underlying spot, ATM strike, call/put mids, the straddle price (≈ 1σ move in $), upper/lower bounds, and an IV-implied move for cross-check. Requires either `expirationDate` (exact YYYY-MM-DD) or `daysToExpiration` (nearest match). Issues two short-lived DXLink snapshots (spot, then ATM call+put).",
+      inputSchema: {
+        underlyingSymbol: z.string(),
+        expirationDate: z.string().optional().describe("Exact YYYY-MM-DD"),
+        daysToExpiration: z
+          .number()
+          .int()
+          .nonnegative()
+          .optional()
+          .describe(
+            "If expirationDate is omitted, pick the expiration with DTE nearest this value",
+          ),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ underlyingSymbol, expirationDate, daysToExpiration }) =>
       wrap(async () => {
@@ -111,7 +134,7 @@ export const registerInstrumentTools = (
         }
         if (provider.mode === "rest") {
           throw new Error(
-            "get_expected_move requires DXLink streaming (Greeks/IV are not available via REST). Unset TASTYTRADE_DISABLE_DXLINK to use this tool.",
+            "tastytrade_get_expected_move requires DXLink streaming (Greeks/IV are not available via REST). Unset TASTYTRADE_DISABLE_DXLINK to use this tool.",
           );
         }
         const raw = await getOptionChainNested(http, underlyingSymbol);
@@ -151,22 +174,26 @@ export const registerInstrumentTools = (
       }),
   );
 
-  server.tool(
-    "get_chain_with_greeks",
-    "Option chain slice enriched with quote (bid/ask/mid) and Greeks (delta/gamma/theta/vega/rho/IV) per leg. Bounded to a strike window around spot (default ATM±20 strikes) so the response stays compact. Use for spread / iron-condor design. Requires either expirationDate (exact YYYY-MM-DD) or daysToExpiration (nearest match).",
+  server.registerTool(
+    "tastytrade_get_chain_with_greeks",
     {
-      underlyingSymbol: z.string(),
-      expirationDate: z.string().optional(),
-      daysToExpiration: z.number().int().nonnegative().optional(),
-      strikeWindow: z
-        .number()
-        .int()
-        .positive()
-        .max(100)
-        .optional()
-        .describe("Number of strikes either side of spot (default 20)"),
-      optionType: z.enum(["call", "put", "both"]).optional(),
-      timeoutMs: z.number().int().positive().max(15000).optional(),
+      description:
+        "Option chain slice enriched with quote (bid/ask/mid) and Greeks (delta/gamma/theta/vega/rho/IV) per leg. Bounded to a strike window around spot (default ATM±20 strikes) so the response stays compact. Use for spread / iron-condor design. Requires either expirationDate (exact YYYY-MM-DD) or daysToExpiration (nearest match).",
+      inputSchema: {
+        underlyingSymbol: z.string(),
+        expirationDate: z.string().optional(),
+        daysToExpiration: z.number().int().nonnegative().optional(),
+        strikeWindow: z
+          .number()
+          .int()
+          .positive()
+          .max(100)
+          .optional()
+          .describe("Number of strikes either side of spot (default 20)"),
+        optionType: z.enum(["call", "put", "both"]).optional(),
+        timeoutMs: z.number().int().positive().max(15000).optional(),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ underlyingSymbol, expirationDate, daysToExpiration, ...rest }) =>
       wrap(async () => {
@@ -181,16 +208,20 @@ export const registerInstrumentTools = (
       }),
   );
 
-  server.tool(
-    "find_strikes_by_delta",
-    "For each target delta, find the strike in the chain whose actual delta is closest. Useful for iron-condor / wing-selection workflows. Positive targets are matched against calls; negative targets against puts. Scans a strike window (default ATM±25) around spot.",
+  server.registerTool(
+    "tastytrade_find_strikes_by_delta",
     {
-      underlyingSymbol: z.string(),
-      expirationDate: z.string().optional(),
-      daysToExpiration: z.number().int().nonnegative().optional(),
-      deltas: z.array(z.number().min(-1).max(1)).min(1).max(20),
-      strikeWindow: z.number().int().positive().max(100).optional(),
-      timeoutMs: z.number().int().positive().max(15000).optional(),
+      description:
+        "For each target delta, find the strike in the chain whose actual delta is closest. Useful for iron-condor / wing-selection workflows. Positive targets are matched against calls; negative targets against puts. Scans a strike window (default ATM±25) around spot.",
+      inputSchema: {
+        underlyingSymbol: z.string(),
+        expirationDate: z.string().optional(),
+        daysToExpiration: z.number().int().nonnegative().optional(),
+        deltas: z.array(z.number().min(-1).max(1)).min(1).max(20),
+        strikeWindow: z.number().int().positive().max(100).optional(),
+        timeoutMs: z.number().int().positive().max(15000).optional(),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({
       underlyingSymbol,
@@ -229,13 +260,17 @@ export const registerInstrumentTools = (
       }),
   );
 
-  server.tool(
-    "get_earnings_calendar",
-    "Bundled earnings dates for a batch of symbols. Wraps get_market_metrics and extracts {symbol, expectedReportDate, timeOfDay, estimatedEarnings} per name. Optional from/to (YYYY-MM-DD) filter on expectedReportDate; when neither is provided, all rows pass through (including those with no upcoming date).",
+  server.registerTool(
+    "tastytrade_get_earnings_calendar",
     {
-      symbols: z.array(z.string()).min(1).max(100),
-      from: z.string().optional().describe("YYYY-MM-DD inclusive lower bound"),
-      to: z.string().optional().describe("YYYY-MM-DD inclusive upper bound"),
+      description:
+        "Bundled earnings dates for a batch of symbols. Wraps tastytrade_get_market_metrics and extracts {symbol, expectedReportDate, timeOfDay, estimatedEarnings} per name. Optional from/to (YYYY-MM-DD) filter on expectedReportDate; when neither is provided, all rows pass through (including those with no upcoming date).",
+      inputSchema: {
+        symbols: z.array(z.string()).min(1).max(100),
+        from: z.string().optional().describe("YYYY-MM-DD inclusive lower bound"),
+        to: z.string().optional().describe("YYYY-MM-DD inclusive upper bound"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ symbols, from, to }) =>
       wrap(async () => {
@@ -251,38 +286,54 @@ export const registerInstrumentTools = (
       }),
   );
 
-  server.tool(
-    "get_future",
-    "Get instrument metadata for a futures symbol.",
-    { symbol: z.string() },
+  server.registerTool(
+    "tastytrade_get_future",
+    {
+      description: "Get instrument metadata for a futures symbol.",
+      inputSchema: { symbol: z.string() },
+      annotations: { readOnlyHint: true },
+    },
     async ({ symbol }) => wrap(() => getFuture(http, symbol)),
   );
 
-  server.tool(
-    "get_cryptocurrency",
-    "Get instrument metadata for a crypto symbol (e.g. BTC/USD).",
-    { symbol: z.string() },
+  server.registerTool(
+    "tastytrade_get_cryptocurrency",
+    {
+      description: "Get instrument metadata for a crypto symbol (e.g. BTC/USD).",
+      inputSchema: { symbol: z.string() },
+      annotations: { readOnlyHint: true },
+    },
     async ({ symbol }) => wrap(() => getCryptocurrency(http, symbol)),
   );
 
-  server.tool(
-    "get_market_metrics",
-    "Get IV rank/percentile, beta, liquidity, IV term structure, etc. for one or more symbols. Note: fields like dividendNextDate / earningsNextDate reflect the last known scheduled event and may be in the past if no upcoming event has been announced.",
-    { symbols: z.array(z.string()).min(1).max(100) },
+  server.registerTool(
+    "tastytrade_get_market_metrics",
+    {
+      description:
+        "Get IV rank/percentile, beta, liquidity, IV term structure, etc. for one or more symbols. Note: fields like dividendNextDate / earningsNextDate reflect the last known scheduled event and may be in the past if no upcoming event has been announced.",
+      inputSchema: { symbols: z.array(z.string()).min(1).max(100) },
+      annotations: { readOnlyHint: true },
+    },
     async ({ symbols }) => wrap(() => getMarketMetrics(http, symbols)),
   );
 
-  server.tool(
-    "get_dividend_history",
-    "Historical dividends for a symbol.",
-    { symbol: z.string() },
+  server.registerTool(
+    "tastytrade_get_dividend_history",
+    {
+      description: "Historical dividends for a symbol.",
+      inputSchema: { symbol: z.string() },
+      annotations: { readOnlyHint: true },
+    },
     async ({ symbol }) => wrap(() => getDividendHistory(http, symbol)),
   );
 
-  server.tool(
-    "get_earnings_history",
-    "Historical earnings reports for a symbol.",
-    { symbol: z.string() },
+  server.registerTool(
+    "tastytrade_get_earnings_history",
+    {
+      description: "Historical earnings reports for a symbol.",
+      inputSchema: { symbol: z.string() },
+      annotations: { readOnlyHint: true },
+    },
     async ({ symbol }) => wrap(() => getEarningsHistory(http, symbol)),
   );
 };

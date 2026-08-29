@@ -2,7 +2,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { BUILD_INFO } from "./build-info.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, isConfigured, setupInstructions } from "./config.js";
 import { createServer } from "./server.js";
 
 const stderrLogger = {
@@ -27,6 +27,10 @@ const main = async (): Promise<void> => {
       ? "on"
       : "off";
   stderrLogger.warn(`tastytrade-mcp connected (env=${config.env}, trading=${tradingMode})`);
+  if (!isConfigured(config)) {
+    stderrLogger.warn("  not configured — only tastytrade_auth_status is available:");
+    for (const line of setupInstructions(config)) stderrLogger.warn(`  ${line}`);
+  }
   if (config.dangerouslyAllowTrading) {
     stderrLogger.warn(
       "⚠️  TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 — orders submit immediately, no confirm gate.",

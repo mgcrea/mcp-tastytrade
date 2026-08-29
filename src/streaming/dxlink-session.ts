@@ -424,7 +424,7 @@ export class DxlinkSession {
             /* never throw from message handler */
           }
           const err = new Error(
-            "DXLink rejected authentication. Check the OAuth scope on your grant, whether the refresh token is still valid, or whether another client holds the DXLink session for this grant. Run get_diagnostics for the full AUTH_STATE body.",
+            "DXLink rejected authentication. Check the OAuth scope on your grant, whether the refresh token is still valid, or whether another client holds the DXLink session for this grant. Run tastytrade_get_diagnostics for the full AUTH_STATE body.",
           );
           this.logger.error?.("dxlink: giving up auth:", err.message);
           this.gaveUpThisCycle = true;

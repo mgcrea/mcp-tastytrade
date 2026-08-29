@@ -6,17 +6,21 @@ import type { ToolContext } from "./index.js";
 import { wrap } from "./util.js";
 
 export const registerDiagnosticsTool = (server: McpServer, ctx: ToolContext): void => {
-  server.tool(
-    "get_diagnostics",
-    "Inspect server state and recent logs to debug failing tools. Returns market-data provider state (DXLink session details, or REST-mode request counters when streaming is disabled), OAuth token freshness (no secret values), server build info, and the last N log lines (debug/warn/error). No token values, credentials, or PII are returned.",
+  server.registerTool(
+    "tastytrade_get_diagnostics",
     {
-      logLimit: z
-        .number()
-        .int()
-        .nonnegative()
-        .max(500)
-        .optional()
-        .describe("How many recent log lines to include (default 200)."),
+      description:
+        "Inspect server state and recent logs to debug failing tools. Returns market-data provider state (DXLink session details, or REST-mode request counters when streaming is disabled), OAuth token freshness (no secret values), server build info, and the last N log lines (debug/warn/error). No token values, credentials, or PII are returned.",
+      inputSchema: {
+        logLimit: z
+          .number()
+          .int()
+          .nonnegative()
+          .max(500)
+          .optional()
+          .describe("How many recent log lines to include (default 200)."),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ logLimit }) =>
       wrap(async () => ({

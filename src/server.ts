@@ -46,9 +46,12 @@ export const createServer = (opts: CreateServerOptions): CreatedServer => {
   const logger = teeLogger(opts.logger, recorder);
   const http = new TastytradeHttpClient({
     baseUrl: opts.config.baseUrl,
+    // Placeholders when unconfigured: the client is built either way so
+    // `createServer` stays total, but no API-calling tool is registered, so it
+    // is never actually asked to exchange a token.
     oauth: {
-      clientSecret: opts.config.clientSecret,
-      refreshToken: opts.config.refreshToken,
+      clientSecret: opts.config.clientSecret ?? "",
+      refreshToken: opts.config.refreshToken ?? "",
       scope: opts.config.scope,
     },
     ...(opts.fetch ? { fetch: opts.fetch } : {}),

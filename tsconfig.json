@@ -20,6 +20,6 @@
     "rootDir": ".",
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*", "test/**/*", "tsdown.config.ts"],
+  "include": ["src/**/*", "test/**/*", "tsdown.config.ts", "vitest.config.ts"],
   "exclude": ["dist", "node_modules"]
 }

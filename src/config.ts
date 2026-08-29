@@ -13,8 +13,10 @@ export const BASE_URLS: Record<TastytradeEnv, string> = {
 };
 
 const ConfigSchema = z.object({
-  clientSecret: z.string().min(1, "TASTYTRADE_CLIENT_SECRET is required"),
-  refreshToken: z.string().min(1, "TASTYTRADE_REFRESH_TOKEN is required"),
+  // Optional at the schema level so "nothing is configured" is a state the
+  // server can report, not a crash before it ever connects — see loadConfig.
+  clientSecret: z.string().min(1).optional(),
+  refreshToken: z.string().min(1).optional(),
   scope: z.string().min(1).default("read trade"),
   env: TastytradeEnv.default("prod"),
   baseUrl: z.string().url().optional(),
@@ -28,8 +30,8 @@ const ConfigSchema = z.object({
   // fingerprinting.
   dxlinkVersion: z.string().min(1).default(DEFAULT_DXLINK_VERSION),
   // Opt-in: skip DXLink entirely and serve quotes via REST `/market-data/by-type`.
-  // Loses Greeks (delta/gamma/theta/...), but keeps `get_quote`, `get_quotes`,
-  // `get_chain_with_greeks`, and `get_position_greeks` working when streaming
+  // Loses Greeks (delta/gamma/theta/...), but keeps `tastytrade_get_quote`, `tastytrade_get_quotes`,
+  // `tastytrade_get_chain_with_greeks`, and `tastytrade_get_position_greeks` working when streaming
   // is broken.
   disableDxlink: z.boolean().default(false),
 });
@@ -64,4 +66,22 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     ...parsed,
     baseUrl: parsed.baseUrl ?? BASE_URLS[parsed.env],
   };
+};
+
+/** True once the server can actually exchange the refresh token for a session. */
+export const isConfigured = (config: Config): boolean =>
+  Boolean(config.clientSecret && config.refreshToken);
+
+/** Returned by tastytrade_auth_status and printed to stderr at startup. */
+export const setupInstructions = (config: Config): string[] => {
+  if (isConfigured(config)) return [];
+  const missing: string[] = [];
+  if (!config.clientSecret) missing.push("TASTYTRADE_CLIENT_SECRET");
+  if (!config.refreshToken) missing.push("TASTYTRADE_REFRESH_TOKEN");
+  return [
+    `Set ${missing.join(" and ")}.`,
+    "Create an OAuth client under My Profile → API in the TastyTrade web platform, then " +
+      "complete the authorization flow once to obtain a refresh token.",
+    "Then restart the server.",
+  ];
 };

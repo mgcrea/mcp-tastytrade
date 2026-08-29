@@ -8,3 +8,5 @@ coverage
 .idea
 .mcp.json
 scripts/*.mjs
+.env.*
+!.env.example
