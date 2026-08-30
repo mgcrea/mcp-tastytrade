@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import {
@@ -29,7 +29,7 @@ export const registerWatchlistReadTools = (server: McpServer, http: TastytradeHt
     {
       title: "TastyTrade: List Watchlists",
       description: "List the user's private watchlists.",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () => wrap(() => listWatchlists(http)),
@@ -39,7 +39,7 @@ export const registerWatchlistReadTools = (server: McpServer, http: TastytradeHt
     {
       title: "TastyTrade: Get Watchlist",
       description: "Get a private watchlist by name.",
-      inputSchema: { name: z.string() },
+      inputSchema: z.object({ name: z.string() }),
       annotations: { readOnlyHint: true },
     },
     async ({ name }) => wrap(() => getWatchlist(http, name)),
@@ -49,7 +49,7 @@ export const registerWatchlistReadTools = (server: McpServer, http: TastytradeHt
     {
       title: "TastyTrade: List Public Watchlists",
       description: "List TastyTrade-published public watchlists.",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () => wrap(() => listPublicWatchlists(http)),
@@ -59,7 +59,7 @@ export const registerWatchlistReadTools = (server: McpServer, http: TastytradeHt
     {
       title: "TastyTrade: Get Public Watchlist",
       description: "Get a public watchlist by name.",
-      inputSchema: { name: z.string() },
+      inputSchema: z.object({ name: z.string() }),
       annotations: { readOnlyHint: true },
     },
     async ({ name }) => wrap(() => getPublicWatchlist(http, name)),
@@ -76,7 +76,7 @@ export const registerWatchlistWriteTools = (
     {
       title: "TastyTrade: Create Watchlist",
       description: "Create a private watchlist.",
-      inputSchema: { body: WatchlistBodySchema },
+      inputSchema: z.object({ body: WatchlistBodySchema }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
     async ({ body }) => wrap(() => createWatchlist(http, body as WatchlistBody)),
@@ -86,7 +86,7 @@ export const registerWatchlistWriteTools = (
     {
       title: "TastyTrade: Update Watchlist",
       description: "Update a private watchlist by name (replaces entries).",
-      inputSchema: { name: z.string(), body: WatchlistBodySchema },
+      inputSchema: z.object({ name: z.string(), body: WatchlistBodySchema }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },
     async ({ name, body }) => wrap(() => updateWatchlist(http, name, body as WatchlistBody)),
@@ -98,7 +98,7 @@ export const registerWatchlistWriteTools = (
       description: skipConfirm
         ? "Delete a private watchlist. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — deletes immediately by default."
         : "Delete a private watchlist by name.",
-      inputSchema: { name: z.string(), confirm: z.boolean().default(skipConfirm) },
+      inputSchema: z.object({ name: z.string(), confirm: z.boolean().default(skipConfirm) }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ name, confirm }) =>

@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { getAccount, getCustomer, listAccounts } from "#/client/endpoints/accounts";
@@ -24,7 +24,7 @@ export const registerAccountTools = (
     {
       title: "TastyTrade: List Accounts",
       description: "List the customer's TastyTrade accounts (account numbers, nicknames, types).",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () => wrap(() => listAccounts(http)),
@@ -35,7 +35,9 @@ export const registerAccountTools = (
     {
       title: "TastyTrade: Get Account",
       description: "Get details for a specific TastyTrade account.",
-      inputSchema: { accountNumber: z.string().describe("Account number, e.g. 5WX12345") },
+      inputSchema: z.object({
+        accountNumber: z.string().describe("Account number, e.g. 5WX12345"),
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ accountNumber }) => wrap(() => getAccount(http, accountNumber)),
@@ -46,7 +48,7 @@ export const registerAccountTools = (
     {
       title: "TastyTrade: Get Customer",
       description: "Get the authenticated customer profile.",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () => wrap(() => getCustomer(http)),
@@ -57,7 +59,7 @@ export const registerAccountTools = (
     {
       title: "TastyTrade: Get Balances",
       description: "Get current cash and margin balances for an account.",
-      inputSchema: { accountNumber: z.string() },
+      inputSchema: z.object({ accountNumber: z.string() }),
       annotations: { readOnlyHint: true },
     },
     async ({ accountNumber }) => wrap(() => getBalances(http, accountNumber)),
@@ -68,7 +70,7 @@ export const registerAccountTools = (
     {
       title: "TastyTrade: Get Positions",
       description: "List open (and optionally closed) positions for an account.",
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         underlyingSymbol: z.array(z.string()).optional(),
         symbol: z.string().optional(),
@@ -76,7 +78,7 @@ export const registerAccountTools = (
         includeClosedPositions: z.boolean().optional(),
         netPositions: z.boolean().optional(),
         includeMarks: z.boolean().optional(),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ accountNumber, ...query }) => wrap(() => getPositions(http, accountNumber, query)),
@@ -88,11 +90,11 @@ export const registerAccountTools = (
       title: "TastyTrade: Get Position Greeks",
       description:
         "Per-position greeks + per-underlying and portfolio-net totals for an account. Equity options use streamed Greeks via the long-lived DXLink session; equity positions contribute delta=1 per share. Contributions follow desk convention: signedQuantity × multiplier × per-contract greek. Returns missingMarks for any option leg whose quote/greeks couldn't be fetched.",
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         includeClosedPositions: z.boolean().optional(),
         timeoutMs: z.number().int().positive().max(15000).optional(),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ accountNumber, includeClosedPositions, timeoutMs }) =>

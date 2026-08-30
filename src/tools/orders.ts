@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import {
@@ -95,7 +95,7 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
     {
       title: "TastyTrade: List Orders",
       description: "List orders for an account, optionally filtered by status / date range.",
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         perPage: z.number().int().positive().max(2000).optional(),
         pageOffset: z.number().int().nonnegative().optional(),
@@ -104,7 +104,7 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
         status: z.array(z.string()).optional(),
         underlyingSymbol: z.string().optional(),
         sort: z.enum(["Desc", "Asc"]).optional(),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ accountNumber, ...query }) => wrap(() => listOrders(http, accountNumber, query)),
@@ -115,7 +115,10 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
     {
       title: "TastyTrade: Get Order",
       description: "Get a single order by id.",
-      inputSchema: { accountNumber: z.string(), orderId: z.union([z.string(), z.number()]) },
+      inputSchema: z.object({
+        accountNumber: z.string(),
+        orderId: z.union([z.string(), z.number()]),
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ accountNumber, orderId }) => wrap(() => getOrder(http, accountNumber, orderId)),
@@ -127,7 +130,10 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
       title: "TastyTrade: Get Complex Order",
       description:
         "Get a single complex order (OTOCO/OCO/OTO bracket) by id, including all linked child orders.",
-      inputSchema: { accountNumber: z.string(), orderId: z.union([z.string(), z.number()]) },
+      inputSchema: z.object({
+        accountNumber: z.string(),
+        orderId: z.union([z.string(), z.number()]),
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ accountNumber, orderId }) => wrap(() => getComplexOrder(http, accountNumber, orderId)),
@@ -148,7 +154,7 @@ export const registerOrderWriteTools = (
     {
       title: "TastyTrade: Place Order",
       description: placeDescription,
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         order: OrderRequestSchema,
         confirm: z
@@ -159,7 +165,7 @@ export const registerOrderWriteTools = (
               ? "true (default with DANGEROUSLY flag) submits; false forces a dry-run preview."
               : "false (default) returns a dry-run preview; true submits the order.",
           ),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
     async ({ accountNumber, order, confirm }) =>
@@ -184,11 +190,11 @@ export const registerOrderWriteTools = (
       description: skipConfirm
         ? "Cancel an open order. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — cancels immediately by default."
         : "Cancel an open order.",
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         orderId: z.union([z.string(), z.number()]),
         confirm: z.boolean().default(skipConfirm),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ accountNumber, orderId, confirm }) =>
@@ -211,11 +217,11 @@ export const registerOrderWriteTools = (
       description: skipConfirm
         ? "Cancel every open order on an account (optionally filtered by underlyingSymbol). TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — cancels immediately by default. Pass confirm=false to force a dry-run preview. Returns {cancelled, failed} on submit; partial failures are reported per order."
         : "Cancel every open order on an account (optionally filtered by underlyingSymbol). Call with confirm=false (default) to preview which orders would be cancelled; confirm=true to submit. Returns {cancelled, failed} on submit so you can see any per-order failures.",
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         underlyingSymbol: z.string().optional(),
         confirm: z.boolean().default(skipConfirm),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ accountNumber, underlyingSymbol, confirm }) =>
@@ -269,12 +275,12 @@ export const registerOrderWriteTools = (
       description: skipConfirm
         ? "Replace an open order. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — replaces by default. Pass confirm=false to force a dry-run preview instead."
         : "Replace an open order with a new one. confirm=true required.",
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         orderId: z.union([z.string(), z.number()]),
         order: OrderRequestSchema,
         confirm: z.boolean().default(skipConfirm),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
     },
     async ({ accountNumber, orderId, order, confirm }) =>
@@ -301,7 +307,7 @@ export const registerOrderWriteTools = (
     {
       title: "TastyTrade: Place Complex Order",
       description: placeComplexDescription,
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         order: ComplexOrderRequestSchema,
         confirm: z
@@ -312,7 +318,7 @@ export const registerOrderWriteTools = (
               ? "true (default with DANGEROUSLY flag) submits; false forces a dry-run preview."
               : "false (default) returns a dry-run preview; true submits the order.",
           ),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
     async ({ accountNumber, order, confirm }) =>
@@ -345,11 +351,11 @@ export const registerOrderWriteTools = (
       description: skipConfirm
         ? "Cancel a complex order (OTOCO/OCO/OTO) and all of its linked child orders. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — cancels immediately by default."
         : "Cancel a complex order (OTOCO/OCO/OTO) and all of its linked child orders.",
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         orderId: z.union([z.string(), z.number()]),
         confirm: z.boolean().default(skipConfirm),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ accountNumber, orderId, confirm }) =>

@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { BUILD_INFO } from "#/build-info";
@@ -12,7 +12,7 @@ export const registerDiagnosticsTool = (server: McpServer, ctx: ToolContext): vo
       title: "TastyTrade: Get Diagnostics",
       description:
         "Inspect server state and recent logs to debug failing tools. Returns market-data provider state (DXLink session details, or REST-mode request counters when streaming is disabled), OAuth token freshness (no secret values), server build info, and the last N log lines (debug/warn/error). No token values, credentials, or PII are returned.",
-      inputSchema: {
+      inputSchema: z.object({
         logLimit: z
           .number()
           .int()
@@ -20,7 +20,7 @@ export const registerDiagnosticsTool = (server: McpServer, ctx: ToolContext): vo
           .max(500)
           .optional()
           .describe("How many recent log lines to include (default 200)."),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ logLimit }) =>

@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { getTransaction, listTransactions } from "#/client/endpoints/transactions";
@@ -11,7 +11,7 @@ export const registerTransactionTools = (server: McpServer, http: TastytradeHttp
     {
       title: "TastyTrade: List Transactions",
       description: "List transactions for an account, with optional date range and filters.",
-      inputSchema: {
+      inputSchema: z.object({
         accountNumber: z.string(),
         perPage: z.number().int().positive().max(2000).optional(),
         pageOffset: z.number().int().nonnegative().optional(),
@@ -22,7 +22,7 @@ export const registerTransactionTools = (server: McpServer, http: TastytradeHttp
         symbol: z.string().optional(),
         underlyingSymbol: z.string().optional(),
         instrumentType: z.string().optional(),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ accountNumber, ...query }) => wrap(() => listTransactions(http, accountNumber, query)),
@@ -33,7 +33,7 @@ export const registerTransactionTools = (server: McpServer, http: TastytradeHttp
     {
       title: "TastyTrade: Get Transaction",
       description: "Get a single transaction by id.",
-      inputSchema: { accountNumber: z.string(), id: z.union([z.string(), z.number()]) },
+      inputSchema: z.object({ accountNumber: z.string(), id: z.union([z.string(), z.number()]) }),
       annotations: { readOnlyHint: true },
     },
     async ({ accountNumber, id }) => wrap(() => getTransaction(http, accountNumber, id)),

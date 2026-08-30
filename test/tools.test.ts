@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { TastytradeHttpClient } from "#/client/http";
@@ -44,12 +44,14 @@ const captureTools = (
   vi.spyOn(server, "registerTool").mockImplementation(((...args: unknown[]) => {
     // server.registerTool(name, { description, inputSchema, annotations }, handler)
     const options = args[1] as {
-      inputSchema?: Record<string, unknown>;
+      inputSchema?: { shape?: Record<string, unknown> };
       annotations?: ToolAnnotations;
     };
     tools.push({
       name: args[0] as string,
-      schema: options.inputSchema ?? {},
+      // SDK v2 takes a `z.object()` rather than a raw shape, so the per-field
+      // schemas these tests assert on live one level down, on `.shape`.
+      schema: options.inputSchema?.shape ?? {},
       annotations: options.annotations,
     });
     return (original as (...a: unknown[]) => unknown)(...args);

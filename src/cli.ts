@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 
 import { BUILD_INFO } from "#/build-info";
 import { loadConfig, isConfigured, setupInstructions } from "#/config";
