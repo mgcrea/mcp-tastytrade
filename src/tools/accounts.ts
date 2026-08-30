@@ -22,6 +22,7 @@ export const registerAccountTools = (
   server.registerTool(
     "tastytrade_list_accounts",
     {
+      title: "TastyTrade: List Accounts",
       description: "List the customer's TastyTrade accounts (account numbers, nicknames, types).",
       inputSchema: {},
       annotations: { readOnlyHint: true },
@@ -32,6 +33,7 @@ export const registerAccountTools = (
   server.registerTool(
     "tastytrade_get_account",
     {
+      title: "TastyTrade: Get Account",
       description: "Get details for a specific TastyTrade account.",
       inputSchema: { accountNumber: z.string().describe("Account number, e.g. 5WX12345") },
       annotations: { readOnlyHint: true },
@@ -42,6 +44,7 @@ export const registerAccountTools = (
   server.registerTool(
     "tastytrade_get_customer",
     {
+      title: "TastyTrade: Get Customer",
       description: "Get the authenticated customer profile.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
@@ -52,6 +55,7 @@ export const registerAccountTools = (
   server.registerTool(
     "tastytrade_get_balances",
     {
+      title: "TastyTrade: Get Balances",
       description: "Get current cash and margin balances for an account.",
       inputSchema: { accountNumber: z.string() },
       annotations: { readOnlyHint: true },
@@ -62,6 +66,7 @@ export const registerAccountTools = (
   server.registerTool(
     "tastytrade_get_positions",
     {
+      title: "TastyTrade: Get Positions",
       description: "List open (and optionally closed) positions for an account.",
       inputSchema: {
         accountNumber: z.string(),
@@ -80,6 +85,7 @@ export const registerAccountTools = (
   server.registerTool(
     "tastytrade_get_position_greeks",
     {
+      title: "TastyTrade: Get Position Greeks",
       description:
         "Per-position greeks + per-underlying and portfolio-net totals for an account. Equity options use streamed Greeks via the long-lived DXLink session; equity positions contribute delta=1 per share. Contributions follow desk convention: signedQuantity × multiplier × per-contract greek. Returns missingMarks for any option leg whose quote/greeks couldn't be fetched.",
       inputSchema: {

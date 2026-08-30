@@ -9,6 +9,7 @@ export const registerDiagnosticsTool = (server: McpServer, ctx: ToolContext): vo
   server.registerTool(
     "tastytrade_get_diagnostics",
     {
+      title: "TastyTrade: Get Diagnostics",
       description:
         "Inspect server state and recent logs to debug failing tools. Returns market-data provider state (DXLink session details, or REST-mode request counters when streaming is disabled), OAuth token freshness (no secret values), server build info, and the last N log lines (debug/warn/error). No token values, credentials, or PII are returned.",
       inputSchema: {

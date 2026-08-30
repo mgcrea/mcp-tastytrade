@@ -12,6 +12,7 @@ export const registerStatusTool = (server: McpServer, config: Config): void => {
   server.registerTool(
     "tastytrade_auth_status",
     {
+      title: "TastyTrade: Auth Status",
       description:
         "Report whether this server has working TastyTrade credentials, which environment it " +
         "points at, whether trading is enabled, and — when something is missing — exactly what " +

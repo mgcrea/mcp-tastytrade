@@ -9,6 +9,7 @@ export const registerTransactionTools = (server: McpServer, http: TastytradeHttp
   server.registerTool(
     "tastytrade_list_transactions",
     {
+      title: "TastyTrade: List Transactions",
       description: "List transactions for an account, with optional date range and filters.",
       inputSchema: {
         accountNumber: z.string(),
@@ -30,6 +31,7 @@ export const registerTransactionTools = (server: McpServer, http: TastytradeHttp
   server.registerTool(
     "tastytrade_get_transaction",
     {
+      title: "TastyTrade: Get Transaction",
       description: "Get a single transaction by id.",
       inputSchema: { accountNumber: z.string(), id: z.union([z.string(), z.number()]) },
       annotations: { readOnlyHint: true },

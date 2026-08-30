@@ -27,6 +27,7 @@ export const registerWatchlistReadTools = (server: McpServer, http: TastytradeHt
   server.registerTool(
     "tastytrade_list_watchlists",
     {
+      title: "TastyTrade: List Watchlists",
       description: "List the user's private watchlists.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
@@ -36,6 +37,7 @@ export const registerWatchlistReadTools = (server: McpServer, http: TastytradeHt
   server.registerTool(
     "tastytrade_get_watchlist",
     {
+      title: "TastyTrade: Get Watchlist",
       description: "Get a private watchlist by name.",
       inputSchema: { name: z.string() },
       annotations: { readOnlyHint: true },
@@ -45,6 +47,7 @@ export const registerWatchlistReadTools = (server: McpServer, http: TastytradeHt
   server.registerTool(
     "tastytrade_list_public_watchlists",
     {
+      title: "TastyTrade: List Public Watchlists",
       description: "List TastyTrade-published public watchlists.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
@@ -54,6 +57,7 @@ export const registerWatchlistReadTools = (server: McpServer, http: TastytradeHt
   server.registerTool(
     "tastytrade_get_public_watchlist",
     {
+      title: "TastyTrade: Get Public Watchlist",
       description: "Get a public watchlist by name.",
       inputSchema: { name: z.string() },
       annotations: { readOnlyHint: true },
@@ -70,6 +74,7 @@ export const registerWatchlistWriteTools = (
   server.registerTool(
     "tastytrade_create_watchlist",
     {
+      title: "TastyTrade: Create Watchlist",
       description: "Create a private watchlist.",
       inputSchema: { body: WatchlistBodySchema },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
@@ -79,6 +84,7 @@ export const registerWatchlistWriteTools = (
   server.registerTool(
     "tastytrade_update_watchlist",
     {
+      title: "TastyTrade: Update Watchlist",
       description: "Update a private watchlist by name (replaces entries).",
       inputSchema: { name: z.string(), body: WatchlistBodySchema },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
@@ -88,6 +94,7 @@ export const registerWatchlistWriteTools = (
   server.registerTool(
     "tastytrade_delete_watchlist",
     {
+      title: "TastyTrade: Delete Watchlist",
       description: skipConfirm
         ? "Delete a private watchlist. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — deletes immediately by default."
         : "Delete a private watchlist by name.",

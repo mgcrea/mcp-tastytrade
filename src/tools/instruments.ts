@@ -30,6 +30,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_search_symbols",
     {
+      title: "TastyTrade: Search Symbols",
       description: "Search for tradable symbols by prefix.",
       inputSchema: { prefix: z.string().min(1) },
       annotations: { readOnlyHint: true },
@@ -40,6 +41,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_equity",
     {
+      title: "TastyTrade: Get Equity",
       description: "Get instrument metadata for an equity symbol.",
       inputSchema: { symbol: z.string() },
       annotations: { readOnlyHint: true },
@@ -50,6 +52,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_equity_option",
     {
+      title: "TastyTrade: Get Equity Option",
       description: "Get instrument metadata for an OCC-formatted equity option symbol.",
       inputSchema: { symbol: z.string(), active: z.boolean().optional() },
       annotations: { readOnlyHint: true },
@@ -61,6 +64,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_option_chain_summary",
     {
+      title: "TastyTrade: Get Option Chain Summary",
       description:
         "Summarize all expirations for an underlying: one line per expiration with strike count and min/max strike. Tiny payload — use this first to pick an expiration, then call tastytrade_get_option_chain with a filter.",
       inputSchema: { underlyingSymbol: z.string() },
@@ -77,6 +81,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_option_chain",
     {
+      title: "TastyTrade: Get Option Chain",
       description:
         "Filtered option chain for an underlying. Returns a flat array of legs (one per call/put per strike) with both OCC and DXLink streamer symbols. If called without any filter, falls back to tastytrade_get_option_chain_summary's shape to avoid 200+ KB responses.",
       inputSchema: {
@@ -106,6 +111,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_expected_move",
     {
+      title: "TastyTrade: Get Expected Move",
       description:
         "Compute the ATM straddle expected ±1σ move for an underlying at a given expiration. Returns underlying spot, ATM strike, call/put mids, the straddle price (≈ 1σ move in $), upper/lower bounds, and an IV-implied move for cross-check. Requires either `expirationDate` (exact YYYY-MM-DD) or `daysToExpiration` (nearest match). Issues two short-lived DXLink snapshots (spot, then ATM call+put).",
       inputSchema: {
@@ -172,6 +178,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_chain_with_greeks",
     {
+      title: "TastyTrade: Get Chain with Greeks",
       description:
         "Option chain slice enriched with quote (bid/ask/mid) and Greeks (delta/gamma/theta/vega/rho/IV) per leg. Bounded to a strike window around spot (default ATM±20 strikes) so the response stays compact. Use for spread / iron-condor design. Requires either expirationDate (exact YYYY-MM-DD) or daysToExpiration (nearest match).",
       inputSchema: {
@@ -206,6 +213,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_find_strikes_by_delta",
     {
+      title: "TastyTrade: Find Strikes by Delta",
       description:
         "For each target delta, find the strike in the chain whose actual delta is closest. Useful for iron-condor / wing-selection workflows. Positive targets are matched against calls; negative targets against puts. Scans a strike window (default ATM±25) around spot.",
       inputSchema: {
@@ -258,6 +266,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_earnings_calendar",
     {
+      title: "TastyTrade: Get Earnings Calendar",
       description:
         "Bundled earnings dates for a batch of symbols. Wraps tastytrade_get_market_metrics and extracts {symbol, expectedReportDate, timeOfDay, estimatedEarnings} per name. Optional from/to (YYYY-MM-DD) filter on expectedReportDate; when neither is provided, all rows pass through (including those with no upcoming date).",
       inputSchema: {
@@ -284,6 +293,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_future",
     {
+      title: "TastyTrade: Get Future",
       description: "Get instrument metadata for a futures symbol.",
       inputSchema: { symbol: z.string() },
       annotations: { readOnlyHint: true },
@@ -294,6 +304,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_cryptocurrency",
     {
+      title: "TastyTrade: Get Cryptocurrency",
       description: "Get instrument metadata for a crypto symbol (e.g. BTC/USD).",
       inputSchema: { symbol: z.string() },
       annotations: { readOnlyHint: true },
@@ -304,6 +315,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_market_metrics",
     {
+      title: "TastyTrade: Get Market Metrics",
       description:
         "Get IV rank/percentile, beta, liquidity, IV term structure, etc. for one or more symbols. Note: fields like dividendNextDate / earningsNextDate reflect the last known scheduled event and may be in the past if no upcoming event has been announced.",
       inputSchema: { symbols: z.array(z.string()).min(1).max(100) },
@@ -315,6 +327,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_dividend_history",
     {
+      title: "TastyTrade: Get Dividend History",
       description: "Historical dividends for a symbol.",
       inputSchema: { symbol: z.string() },
       annotations: { readOnlyHint: true },
@@ -325,6 +338,7 @@ export const registerInstrumentTools = (
   server.registerTool(
     "tastytrade_get_earnings_history",
     {
+      title: "TastyTrade: Get Earnings History",
       description: "Historical earnings reports for a symbol.",
       inputSchema: { symbol: z.string() },
       annotations: { readOnlyHint: true },

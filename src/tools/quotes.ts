@@ -11,6 +11,7 @@ export const registerQuoteTools = (server: McpServer, provider: MarketDataProvid
   server.registerTool(
     "tastytrade_get_quote",
     {
+      title: "TastyTrade: Get Quote",
       description:
         "Snapshot of a single symbol. Accepts either OCC (e.g. 'IWM   260529C00300000') or DXLink (e.g. '.IWM260529C300') option formats. Returns Quote (bid/ask/sizes); for option symbols also returns Greeks (delta/gamma/theta/vega/rho/IV) by default when streaming is available. In REST mode (TASTYTRADE_DISABLE_DXLINK=1) Greeks are always null. Reuses a long-lived DXLink connection in streaming mode; repeat queries for already-subscribed symbols return cached values immediately.",
       inputSchema: {
@@ -37,6 +38,7 @@ export const registerQuoteTools = (server: McpServer, provider: MarketDataProvid
   server.registerTool(
     "tastytrade_get_quotes",
     {
+      title: "TastyTrade: Get Quotes",
       description:
         "Batch snapshot for multiple symbols. Accepts a mix of equity tickers, OCC options, and DXLink options. Returns an array preserving input order; option symbols include Greeks by default in streaming mode, or null Greeks in REST mode.",
       inputSchema: {

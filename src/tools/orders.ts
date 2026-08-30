@@ -93,6 +93,7 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
   server.registerTool(
     "tastytrade_list_orders",
     {
+      title: "TastyTrade: List Orders",
       description: "List orders for an account, optionally filtered by status / date range.",
       inputSchema: {
         accountNumber: z.string(),
@@ -112,6 +113,7 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
   server.registerTool(
     "tastytrade_get_order",
     {
+      title: "TastyTrade: Get Order",
       description: "Get a single order by id.",
       inputSchema: { accountNumber: z.string(), orderId: z.union([z.string(), z.number()]) },
       annotations: { readOnlyHint: true },
@@ -122,6 +124,7 @@ export const registerOrderReadTools = (server: McpServer, http: TastytradeHttpCl
   server.registerTool(
     "tastytrade_get_complex_order",
     {
+      title: "TastyTrade: Get Complex Order",
       description:
         "Get a single complex order (OTOCO/OCO/OTO bracket) by id, including all linked child orders.",
       inputSchema: { accountNumber: z.string(), orderId: z.union([z.string(), z.number()]) },
@@ -143,6 +146,7 @@ export const registerOrderWriteTools = (
   server.registerTool(
     "tastytrade_place_order",
     {
+      title: "TastyTrade: Place Order",
       description: placeDescription,
       inputSchema: {
         accountNumber: z.string(),
@@ -176,6 +180,7 @@ export const registerOrderWriteTools = (
   server.registerTool(
     "tastytrade_cancel_order",
     {
+      title: "TastyTrade: Cancel Order",
       description: skipConfirm
         ? "Cancel an open order. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — cancels immediately by default."
         : "Cancel an open order.",
@@ -202,6 +207,7 @@ export const registerOrderWriteTools = (
   server.registerTool(
     "tastytrade_cancel_all_orders",
     {
+      title: "TastyTrade: Cancel All Orders",
       description: skipConfirm
         ? "Cancel every open order on an account (optionally filtered by underlyingSymbol). TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — cancels immediately by default. Pass confirm=false to force a dry-run preview. Returns {cancelled, failed} on submit; partial failures are reported per order."
         : "Cancel every open order on an account (optionally filtered by underlyingSymbol). Call with confirm=false (default) to preview which orders would be cancelled; confirm=true to submit. Returns {cancelled, failed} on submit so you can see any per-order failures.",
@@ -259,6 +265,7 @@ export const registerOrderWriteTools = (
   server.registerTool(
     "tastytrade_replace_order",
     {
+      title: "TastyTrade: Replace Order",
       description: skipConfirm
         ? "Replace an open order. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — replaces by default. Pass confirm=false to force a dry-run preview instead."
         : "Replace an open order with a new one. confirm=true required.",
@@ -292,6 +299,7 @@ export const registerOrderWriteTools = (
   server.registerTool(
     "tastytrade_place_complex_order",
     {
+      title: "TastyTrade: Place Complex Order",
       description: placeComplexDescription,
       inputSchema: {
         accountNumber: z.string(),
@@ -333,6 +341,7 @@ export const registerOrderWriteTools = (
   server.registerTool(
     "tastytrade_cancel_complex_order",
     {
+      title: "TastyTrade: Cancel Complex Order",
       description: skipConfirm
         ? "Cancel a complex order (OTOCO/OCO/OTO) and all of its linked child orders. TASTYTRADE_DANGEROUSLY_ALLOW_TRADING=1 is set — cancels immediately by default."
         : "Cancel a complex order (OTOCO/OCO/OTO) and all of its linked child orders.",
