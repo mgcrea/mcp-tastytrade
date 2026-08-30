@@ -1,4 +1,4 @@
-import { TastytradeApiError } from "./errors.js";
+import { TastytradeApiError } from "#/client/errors";
 
 export type OAuthCredentials = {
   clientSecret: string;

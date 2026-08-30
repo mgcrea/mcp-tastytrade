@@ -4,9 +4,9 @@
 
 import WebSocket from "ws";
 
-import { BUILD_INFO } from "../build-info.js";
-import { getApiQuoteToken } from "../client/endpoints/quote-tokens.js";
-import type { Logger, TastytradeHttpClient } from "../client/http.js";
+import { BUILD_INFO } from "#/build-info";
+import { getApiQuoteToken } from "#/client/endpoints/quote-tokens";
+import type { Logger, TastytradeHttpClient } from "#/client/http";
 import {
   type EventType,
   type GreeksFields,
@@ -14,8 +14,8 @@ import {
   type QuoteFields,
   REQUESTED_FIELDS,
   defaultTypesForSymbol,
-} from "./dxlink-types.js";
-import { toDxlink } from "./symbol.js";
+} from "#/streaming/dxlink-types";
+import { toDxlink } from "#/streaming/symbol";
 
 const CHANNEL = 3;
 const KEEPALIVE_INTERVAL_MS = 30_000;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { enrichPositions, parseOccDetails, type RawPosition } from "../src/lib/position-greeks.js";
-import type { MarketSnapshot } from "../src/streaming/dxlink-snapshot.js";
+import { enrichPositions, parseOccDetails, type RawPosition } from "#/lib/position-greeks";
+import type { MarketSnapshot } from "#/streaming/dxlink-snapshot";
 
 const optionSnap = (
   dxSym: string,

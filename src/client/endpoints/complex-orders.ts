@@ -1,5 +1,5 @@
-import type { TastytradeHttpClient } from "../http.js";
-import type { OrderRequest } from "./orders.js";
+import type { OrderRequest } from "#/client/endpoints/orders";
+import type { TastytradeHttpClient } from "#/client/http";
 
 export type ComplexOrderRequest = {
   type: "OTOCO" | "OCO" | "OTO";

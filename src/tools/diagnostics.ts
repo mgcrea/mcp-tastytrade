@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { BUILD_INFO } from "../build-info.js";
-import type { ToolContext } from "./index.js";
-import { wrap } from "./util.js";
+import { BUILD_INFO } from "#/build-info";
+import type { ToolContext } from "#/tools/index";
+import { wrap } from "#/tools/util";
 
 export const registerDiagnosticsTool = (server: McpServer, ctx: ToolContext): void => {
   server.registerTool(

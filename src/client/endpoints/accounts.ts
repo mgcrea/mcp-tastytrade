@@ -1,4 +1,4 @@
-import type { TastytradeHttpClient } from "../http.js";
+import type { TastytradeHttpClient } from "#/client/http";
 
 export type CustomerAccount = {
   account: { accountNumber: string; nickname?: string; accountTypeName?: string };

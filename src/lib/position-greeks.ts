@@ -2,8 +2,8 @@
 // Position-delta convention: signedQuantity × multiplier × per-contract-greek
 // (matches desk shorthand: a long call with delta 0.5 contributes +50 shares-equivalent).
 
-import type { MarketSnapshot } from "../streaming/dxlink-snapshot.js";
-import { toDxlink } from "../streaming/symbol.js";
+import type { MarketSnapshot } from "#/streaming/dxlink-snapshot";
+import { toDxlink } from "#/streaming/symbol";
 
 export type RawPosition = {
   symbol: string;

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TastytradeApiError } from "../src/client/errors.js";
-import { TastytradeHttpClient } from "../src/client/http.js";
+import { TastytradeApiError } from "#/client/errors";
+import { TastytradeHttpClient } from "#/client/http";
 
 type MockCall = { url: string; init: RequestInit };
 

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { enrichLeg } from "../src/lib/chain-greeks.js";
-import type { EnrichedLeg } from "../src/lib/chain-greeks.js";
-import type { ChainLeg } from "../src/lib/option-chain.js";
-import type { MarketSnapshot } from "../src/streaming/dxlink-snapshot.js";
-import { extractEarnings, pickStrikeByDelta } from "../src/tools/instruments.js";
+import { enrichLeg } from "#/lib/chain-greeks";
+import type { EnrichedLeg } from "#/lib/chain-greeks";
+import type { ChainLeg } from "#/lib/option-chain";
+import type { MarketSnapshot } from "#/streaming/dxlink-snapshot";
+import { extractEarnings, pickStrikeByDelta } from "#/tools/instruments";
 
 const leg = (overrides: Partial<ChainLeg> = {}): ChainLeg => ({
   expirationDate: "2026-05-29",

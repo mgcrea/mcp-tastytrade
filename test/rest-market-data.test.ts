@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { TastytradeHttpClient } from "../src/client/http.js";
-import { RestMarketDataProvider } from "../src/streaming/rest-market-data.js";
+import { TastytradeHttpClient } from "#/client/http";
+import { RestMarketDataProvider } from "#/streaming/rest-market-data";
 
 const tokenResponse = new Response(JSON.stringify({ access_token: "t", expires_in: 900 }), {
   status: 200,

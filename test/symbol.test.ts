@@ -8,7 +8,7 @@ import {
   occToDxlink,
   toDxlink,
   toOcc,
-} from "../src/streaming/symbol.js";
+} from "#/streaming/symbol";
 
 describe("symbol helpers", () => {
   describe("isOccOption", () => {

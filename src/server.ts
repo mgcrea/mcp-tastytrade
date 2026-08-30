@@ -1,13 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { BUILD_INFO } from "./build-info.js";
-import { TastytradeHttpClient, type Logger } from "./client/http.js";
-import type { Config } from "./config.js";
-import { DiagnosticsRecorder } from "./lib/diagnostics.js";
-import { DxlinkSession } from "./streaming/dxlink-session.js";
-import type { MarketDataProvider } from "./streaming/market-data-provider.js";
-import { RestMarketDataProvider } from "./streaming/rest-market-data.js";
-import { registerTools } from "./tools/index.js";
+import { BUILD_INFO } from "#/build-info";
+import { TastytradeHttpClient, type Logger } from "#/client/http";
+import type { Config } from "#/config";
+import { DiagnosticsRecorder } from "#/lib/diagnostics";
+import { DxlinkSession } from "#/streaming/dxlink-session";
+import type { MarketDataProvider } from "#/streaming/market-data-provider";
+import { RestMarketDataProvider } from "#/streaming/rest-market-data";
+import { registerTools } from "#/tools/index";
 
 export const SERVER_NAME = BUILD_INFO.name;
 export const SERVER_VERSION = BUILD_INFO.version;

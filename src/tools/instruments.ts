@@ -7,25 +7,20 @@ import {
   getEquityOption,
   getFuture,
   getOptionChainNested,
-} from "../client/endpoints/instruments.js";
+} from "#/client/endpoints/instruments";
 import {
   getDividendHistory,
   getEarningsHistory,
   getMarketMetrics,
-} from "../client/endpoints/market-metrics.js";
-import { searchSymbols } from "../client/endpoints/symbol-search.js";
-import type { TastytradeHttpClient } from "../client/http.js";
-import { type EnrichedLeg, fetchEnrichedChain } from "../lib/chain-greeks.js";
-import { computeExpectedMove, pickAtmStrike, pickExpiration } from "../lib/expected-move.js";
-import {
-  isFilterEmpty,
-  type RawChainRoot,
-  sliceChain,
-  summarizeChain,
-} from "../lib/option-chain.js";
-import { getMarketSnapshots } from "../streaming/dxlink-snapshot.js";
-import type { MarketDataProvider } from "../streaming/market-data-provider.js";
-import { wrap } from "./util.js";
+} from "#/client/endpoints/market-metrics";
+import { searchSymbols } from "#/client/endpoints/symbol-search";
+import type { TastytradeHttpClient } from "#/client/http";
+import { type EnrichedLeg, fetchEnrichedChain } from "#/lib/chain-greeks";
+import { computeExpectedMove, pickAtmStrike, pickExpiration } from "#/lib/expected-move";
+import { isFilterEmpty, type RawChainRoot, sliceChain, summarizeChain } from "#/lib/option-chain";
+import { getMarketSnapshots } from "#/streaming/dxlink-snapshot";
+import type { MarketDataProvider } from "#/streaming/market-data-provider";
+import { wrap } from "#/tools/util";
 
 export const registerInstrumentTools = (
   server: McpServer,

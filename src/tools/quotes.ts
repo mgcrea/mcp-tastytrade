@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { getMarketSnapshot, getMarketSnapshots } from "../streaming/dxlink-snapshot.js";
-import type { MarketDataProvider } from "../streaming/market-data-provider.js";
-import { wrap } from "./util.js";
+import { getMarketSnapshot, getMarketSnapshots } from "#/streaming/dxlink-snapshot";
+import type { MarketDataProvider } from "#/streaming/market-data-provider";
+import { wrap } from "#/tools/util";
 
 const EventType = z.enum(["Quote", "Greeks"]);
 

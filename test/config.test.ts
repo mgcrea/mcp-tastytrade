@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BASE_URLS, loadConfig, isConfigured, setupInstructions } from "../src/config.js";
+import { BASE_URLS, loadConfig, isConfigured, setupInstructions } from "#/config";
 
 describe("loadConfig", () => {
   // This used to assert that loadConfig throws. It deliberately no longer does:

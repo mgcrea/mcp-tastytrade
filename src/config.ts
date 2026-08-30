@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { BUILD_INFO } from "./build-info.js";
+import { BUILD_INFO } from "#/build-info";
 
 export const TastytradeEnv = z.enum(["prod", "cert"]);
 

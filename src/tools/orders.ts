@@ -7,7 +7,7 @@ import {
   dryRunComplexOrder,
   getComplexOrder,
   placeComplexOrder,
-} from "../client/endpoints/complex-orders.js";
+} from "#/client/endpoints/complex-orders";
 import {
   cancelOrder,
   dryRunOrder,
@@ -16,9 +16,9 @@ import {
   type OrderRequest,
   placeOrder,
   replaceOrder,
-} from "../client/endpoints/orders.js";
-import type { TastytradeHttpClient } from "../client/http.js";
-import { wrap } from "./util.js";
+} from "#/client/endpoints/orders";
+import type { TastytradeHttpClient } from "#/client/http";
+import { wrap } from "#/tools/util";
 
 const OrderLegSchema = z.object({
   instrumentType: z.string().describe('e.g. "Equity", "Equity Option", "Future", "Future Option"'),

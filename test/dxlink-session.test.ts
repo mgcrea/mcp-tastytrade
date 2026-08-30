@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TastytradeHttpClient } from "../src/client/http.js";
-import { DxlinkSession, type WSLike } from "../src/streaming/dxlink-session.js";
+import { TastytradeHttpClient } from "#/client/http";
+import { DxlinkSession, type WSLike } from "#/streaming/dxlink-session";
 
 // ---- Fake WebSocket --------------------------------------------------------
 

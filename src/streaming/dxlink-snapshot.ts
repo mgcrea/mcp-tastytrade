@@ -1,11 +1,16 @@
 // Snapshot wrappers around a MarketDataProvider (DXLink streaming or REST).
 // The provider owns the connection lifecycle; these helpers exist for tool ergonomics.
 
-import type { EventType, MarketSnapshot } from "./dxlink-types.js";
-import type { MarketDataProvider } from "./market-data-provider.js";
+import type { EventType, MarketSnapshot } from "#/streaming/dxlink-types";
+import type { MarketDataProvider } from "#/streaming/market-data-provider";
 
-export type { EventType, GreeksFields, MarketSnapshot, QuoteFields } from "./dxlink-types.js";
-export { REQUESTED_FIELDS, defaultTypesForSymbol } from "./dxlink-types.js";
+export type {
+  EventType,
+  GreeksFields,
+  MarketSnapshot,
+  QuoteFields,
+} from "#/streaming/dxlink-types";
+export { REQUESTED_FIELDS, defaultTypesForSymbol } from "#/streaming/dxlink-types";
 
 export type SnapshotOptions = {
   types?: EventType[];

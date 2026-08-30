@@ -5,7 +5,7 @@
 // Tools call the provider, never DxlinkSession directly, so REST mode can
 // substitute for streaming when DXLink is unavailable.
 
-import type { EventType, MarketSnapshot } from "./dxlink-types.js";
+import type { EventType, MarketSnapshot } from "#/streaming/dxlink-types";
 
 export type ProviderMode = "dxlink" | "rest";
 

@@ -1,18 +1,18 @@
 // Shared helper: fetch a chain slice and enrich each leg with quote + greeks
 // in a single batched DXLink call. Used by tastytrade_get_chain_with_greeks and tastytrade_find_strikes_by_delta.
 
-import { getOptionChainNested } from "../client/endpoints/instruments.js";
-import type { TastytradeHttpClient } from "../client/http.js";
-import type { MarketSnapshot } from "../streaming/dxlink-snapshot.js";
-import type { MarketDataProvider } from "../streaming/market-data-provider.js";
-import { pickAtmStrike, pickExpiration } from "./expected-move.js";
+import { getOptionChainNested } from "#/client/endpoints/instruments";
+import type { TastytradeHttpClient } from "#/client/http";
+import { pickAtmStrike, pickExpiration } from "#/lib/expected-move";
 import {
   type ChainLeg,
   type RawChainExpiration,
   type RawChainRoot,
   type RawChainStrike,
   sliceChain,
-} from "./option-chain.js";
+} from "#/lib/option-chain";
+import type { MarketSnapshot } from "#/streaming/dxlink-snapshot";
+import type { MarketDataProvider } from "#/streaming/market-data-provider";
 
 export type EnrichedLeg = ChainLeg & {
   bid: number | null;

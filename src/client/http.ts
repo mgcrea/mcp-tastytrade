@@ -1,6 +1,6 @@
-import { toCamelKeys, toKebabKeys } from "../lib/case.js";
-import { TastytradeApiError } from "./errors.js";
-import { AccessToken, type OAuthCredentials } from "./oauth.js";
+import { TastytradeApiError } from "#/client/errors";
+import { AccessToken, type OAuthCredentials } from "#/client/oauth";
+import { toCamelKeys, toKebabKeys } from "#/lib/case";
 
 export type Logger = {
   debug?(...args: unknown[]): void;

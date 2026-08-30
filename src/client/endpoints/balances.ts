@@ -1,4 +1,4 @@
-import type { TastytradeHttpClient } from "../http.js";
+import type { TastytradeHttpClient } from "#/client/http";
 
 export const getBalances = (http: TastytradeHttpClient, accountNumber: string): Promise<unknown> =>
   http.get(`/accounts/${encodeURIComponent(accountNumber)}/balances`);

@@ -5,7 +5,7 @@ import {
   ComplexOrderRequestSchema,
   type RawOpenOrder,
   slimOrder,
-} from "../src/tools/orders.js";
+} from "#/tools/orders";
 
 const entry = {
   timeInForce: "Day" as const,

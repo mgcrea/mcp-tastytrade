@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  isFilterEmpty,
-  type RawChainRoot,
-  sliceChain,
-  summarizeChain,
-} from "../src/lib/option-chain.js";
+import { isFilterEmpty, type RawChainRoot, sliceChain, summarizeChain } from "#/lib/option-chain";
 
 const FIXTURE: RawChainRoot = {
   underlyingSymbol: "IWM",

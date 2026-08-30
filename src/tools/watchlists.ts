@@ -10,9 +10,9 @@ import {
   listWatchlists,
   updateWatchlist,
   type WatchlistBody,
-} from "../client/endpoints/watchlists.js";
-import type { TastytradeHttpClient } from "../client/http.js";
-import { wrap } from "./util.js";
+} from "#/client/endpoints/watchlists";
+import type { TastytradeHttpClient } from "#/client/http";
+import { wrap } from "#/tools/util";
 
 const WatchlistBodySchema = z.object({
   name: z.string().min(1),

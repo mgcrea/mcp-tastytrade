@@ -5,9 +5,9 @@ import {
   computeExpectedMove,
   pickAtmStrike,
   pickExpiration,
-} from "../src/lib/expected-move.js";
-import type { RawChainRoot } from "../src/lib/option-chain.js";
-import type { MarketSnapshot } from "../src/streaming/dxlink-snapshot.js";
+} from "#/lib/expected-move";
+import type { RawChainRoot } from "#/lib/option-chain";
+import type { MarketSnapshot } from "#/streaming/dxlink-snapshot";
 
 const ROOT: RawChainRoot = {
   underlyingSymbol: "IWM",

@@ -5,11 +5,11 @@ import {
   getMarketDataByType,
   type MarketDataByTypeRequest,
   type MarketDataRow,
-} from "../client/endpoints/market-data.js";
-import type { Logger, TastytradeHttpClient } from "../client/http.js";
-import type { EventType, MarketSnapshot, QuoteFields } from "./dxlink-types.js";
-import type { MarketDataProvider } from "./market-data-provider.js";
-import { isDxlinkOption, isOccOption, occToDxlink, toOcc } from "./symbol.js";
+} from "#/client/endpoints/market-data";
+import type { Logger, TastytradeHttpClient } from "#/client/http";
+import type { EventType, MarketSnapshot, QuoteFields } from "#/streaming/dxlink-types";
+import type { MarketDataProvider } from "#/streaming/market-data-provider";
+import { isDxlinkOption, isOccOption, occToDxlink, toOcc } from "#/streaming/symbol";
 
 export type RestMarketDataOptions = {
   logger?: Logger;

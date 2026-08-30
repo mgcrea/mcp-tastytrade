@@ -1,18 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import type { TastytradeHttpClient } from "../client/http.js";
-import type { Config } from "../config.js";
-import { isConfigured } from "../config.js";
-import type { DiagnosticsRecorder } from "../lib/diagnostics.js";
-import type { MarketDataProvider } from "../streaming/market-data-provider.js";
-import { registerAccountTools } from "./accounts.js";
-import { registerDiagnosticsTool } from "./diagnostics.js";
-import { registerInstrumentTools } from "./instruments.js";
-import { registerOrderReadTools, registerOrderWriteTools } from "./orders.js";
-import { registerQuoteTools } from "./quotes.js";
-import { registerStatusTool } from "./status.js";
-import { registerTransactionTools } from "./transactions.js";
-import { registerWatchlistReadTools, registerWatchlistWriteTools } from "./watchlists.js";
+import type { TastytradeHttpClient } from "#/client/http";
+import type { Config } from "#/config";
+import { isConfigured } from "#/config";
+import type { DiagnosticsRecorder } from "#/lib/diagnostics";
+import type { MarketDataProvider } from "#/streaming/market-data-provider";
+import { registerAccountTools } from "#/tools/accounts";
+import { registerDiagnosticsTool } from "#/tools/diagnostics";
+import { registerInstrumentTools } from "#/tools/instruments";
+import { registerOrderReadTools, registerOrderWriteTools } from "#/tools/orders";
+import { registerQuoteTools } from "#/tools/quotes";
+import { registerStatusTool } from "#/tools/status";
+import { registerTransactionTools } from "#/tools/transactions";
+import { registerWatchlistReadTools, registerWatchlistWriteTools } from "#/tools/watchlists";
 
 export type ToolContext = {
   http: TastytradeHttpClient;

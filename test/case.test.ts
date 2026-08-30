@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toCamelKeys, toKebabKeys } from "../src/lib/case.js";
+import { toCamelKeys, toKebabKeys } from "#/lib/case";
 
 describe("case transforms", () => {
   it("converts camelCase keys to kebab-case", () => {

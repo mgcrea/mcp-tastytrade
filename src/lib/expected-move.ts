@@ -2,8 +2,8 @@
 // at a given expiration. We also compute an IV-implied move (underlying * IV * √(DTE/365))
 // for comparison — the two should be in the same ballpark for liquid names.
 
-import type { MarketSnapshot } from "../streaming/dxlink-snapshot.js";
-import type { RawChainExpiration, RawChainRoot, RawChainStrike } from "./option-chain.js";
+import type { RawChainExpiration, RawChainRoot, RawChainStrike } from "#/lib/option-chain";
+import type { MarketSnapshot } from "#/streaming/dxlink-snapshot";
 
 export type LegQuote = {
   occ: string;

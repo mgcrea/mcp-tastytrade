@@ -1,7 +1,7 @@
 // Shared types and constants for DXLink streaming.
 // Kept separate to prevent circular imports between dxlink-session and dxlink-snapshot.
 
-import { isOption } from "./symbol.js";
+import { isOption } from "#/streaming/symbol";
 
 export type EventType = "Quote" | "Greeks";
 

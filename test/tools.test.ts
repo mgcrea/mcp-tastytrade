@@ -1,11 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { describe, expect, it, vi } from "vitest";
 
-import { TastytradeHttpClient } from "../src/client/http.js";
-import { BASE_URLS } from "../src/config.js";
-import { DiagnosticsRecorder } from "../src/lib/diagnostics.js";
-import { DxlinkSession } from "../src/streaming/dxlink-session.js";
-import { registerTools } from "../src/tools/index.js";
+import { TastytradeHttpClient } from "#/client/http";
+import { BASE_URLS } from "#/config";
+import { DiagnosticsRecorder } from "#/lib/diagnostics";
+import { DxlinkSession } from "#/streaming/dxlink-session";
+import { registerTools } from "#/tools/index";
 
 const stubFetch = vi.fn(
   async () =>

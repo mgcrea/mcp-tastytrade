@@ -1,4 +1,4 @@
-import { TastytradeApiError } from "../client/errors.js";
+import { TastytradeApiError } from "#/client/errors";
 
 export type ToolResult = {
   content: { type: "text"; text: string }[];

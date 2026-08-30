@@ -1,4 +1,4 @@
-import type { TastytradeHttpClient } from "../http.js";
+import type { TastytradeHttpClient } from "#/client/http";
 
 // REST `/market-data/by-type` row. Field names match what the HTTP client
 // produces after toCamelKeys() — `bid-size` → `bidSize`, `updated-at` → `updatedAt`.

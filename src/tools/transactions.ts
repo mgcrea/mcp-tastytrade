@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { getTransaction, listTransactions } from "../client/endpoints/transactions.js";
-import type { TastytradeHttpClient } from "../client/http.js";
-import { wrap } from "./util.js";
+import { getTransaction, listTransactions } from "#/client/endpoints/transactions";
+import type { TastytradeHttpClient } from "#/client/http";
+import { wrap } from "#/tools/util";
 
 export const registerTransactionTools = (server: McpServer, http: TastytradeHttpClient): void => {
   server.registerTool(

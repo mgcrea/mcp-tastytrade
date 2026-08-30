@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DiagnosticsRecorder } from "../src/lib/diagnostics.js";
+import { DiagnosticsRecorder } from "#/lib/diagnostics";
 
 const fixedClock = (start: number): (() => Date) => {
   let t = start;
