@@ -49,19 +49,19 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "^2.0.0",
-    "ws": "^8.18.0",
-    "zod": "^4.4.3"
+    "@modelcontextprotocol/server": "^2.3.1",
+    "ws": "^8.22.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@dxfeed/dxlink-api": "^0.3.0",
-    "@types/node": "^26.2.0",
-    "@types/ws": "^8.5.13",
-    "oxfmt": "^0.62.0",
-    "oxlint": "^1.77.0",
-    "tsdown": "^0.22.14",
+    "@dxfeed/dxlink-api": "^0.9.0",
+    "@types/node": "^26.6.4",
+    "@types/ws": "^8.18.2",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "tsdown": "^0.23.0",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.3"
   },
   "engines": {
     "node": ">=22"
